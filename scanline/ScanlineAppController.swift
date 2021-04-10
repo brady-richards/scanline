@@ -230,6 +230,8 @@ class ScannerController: NSObject, ICScannerDeviceDelegate {
         
         if configuration.config[ScanlineConfigOptionTIFF] != nil {
             scanner.documentUTI = kUTTypeTIFF as String
+        } else if configuration.config[ScanlineConfigOptionPNG] != nil  {
+            scanner.documentUTI = kUTTypePNG as String
         } else {
             scanner.documentUTI = kUTTypeJPEG as String
         }
@@ -286,7 +288,7 @@ class ScanlineOutputProcessor {
     }
     
     func process() -> Bool {
-        let wantsPDF = configuration.config[ScanlineConfigOptionJPEG] == nil && configuration.config[ScanlineConfigOptionTIFF] == nil
+        let wantsPDF = configuration.config[ScanlineConfigOptionJPEG] == nil && configuration.config[ScanlineConfigOptionTIFF] == nil && configuration.config[ScanlineConfigOptionPNG] == nil
         if !wantsPDF {
             for url in urls {
                 outputAndTag(url: url)
@@ -345,6 +347,8 @@ class ScanlineOutputProcessor {
             destinationFileExtension = "tif"
         } else if configuration.config[ScanlineConfigOptionJPEG] != nil {
             destinationFileExtension = "jpg"
+        } else if configuration.config[ScanlineConfigOptionPNG] != nil {
+            destinationFileExtension = "png"
         } else {
             destinationFileExtension = "pdf"
         }

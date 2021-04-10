@@ -7,7 +7,7 @@
 //
 
 #import "ScanConfiguration.h"
-#import "scanline-Swift.h"
+// #import "scanline-Swift.h"
 
 BOOL debugLogging = NO;
 
@@ -43,6 +43,9 @@ BOOL debugLogging = NO;
              ScanlineConfigOptionTIFF: @{
                      @"synonyms": @[@"tif"],
                      @"description": @"Scan to a TIFF file (default is PDF)"
+                     },
+             ScanlineConfigOptionPNG: @{
+                     @"description": @"Scan to a PNG file (default is PDF)"
                      },
              ScanlineConfigOptionLegal: @{
                      @"description": @"Scan a legal size page"
