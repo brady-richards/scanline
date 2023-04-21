@@ -44,12 +44,22 @@ BOOL debugLogging = NO;
                      @"synonyms": @[@"tif"],
                      @"description": @"Scan to a TIFF file (default is PDF)"
                      },
+             ScanlineConfigOptionPNG: @{
+                     @"description": @"Scan to a PNG file (default is PDF)"
+                     },
+             ScanlineConfigOptionDocumentType: @{
+                     @"type" : @"string",
+                     @"description": @"Document type to scan"
+                     },
              ScanlineConfigOptionLegal: @{
                      @"description": @"Scan a legal size page"
                      },
              ScanlineConfigOptionLetter: @{
                      @"description": @"Scan a letter size page"
                      },
+             ScanlineConfigOptionLedger: @{
+                     @"description": @"Scan a ledger size page"
+                        },
              ScanlineConfigOptionA4: @{
                      @"description": @"Scan a A4 size page"
                      },
@@ -102,14 +112,14 @@ BOOL debugLogging = NO;
 + (NSString*)canonicalConfigKeyFor:(NSString*)key
 {
     NSDictionary* configOptions = [ScanConfiguration configOptions];
-    
+
     if (configOptions[key] != nil) return key;
-    
+
     for (NSString *canonicalKey in configOptions.keyEnumerator) {
         NSDictionary *details = configOptions[canonicalKey];
         if ([(NSArray*)details[@"synonyms"] containsObject:key]) return canonicalKey;
     }
-    
+
     return nil;
 }
 
@@ -128,9 +138,9 @@ BOOL debugLogging = NO;
     if (self = [super init]) {
         NSDictionary *configOptions = [ScanConfiguration configOptions];
         _config = [NSMutableDictionary dictionaryWithCapacity:configOptions.attributeKeys.count];
-        
+
         _tags = [NSMutableArray arrayWithCapacity:0];
-        
+
         [self loadConfigurationDefaults];
         [self loadConfigurationFromFile:configFilePath];
         [self loadConfigurationFromArguments:inArguments];
@@ -141,10 +151,10 @@ BOOL debugLogging = NO;
 - (void)help
 {
     NSDictionary *configOptions = [ScanConfiguration configOptions];
-    
+
     SKLog(@"Usage: scanline [-option] [-option] [tag] [tag] [tag]...");
     SKLog(@"");
-    
+
     for (NSString *key in configOptions.keyEnumerator) {
         SKLog(@"-%@:", key);
         SKLog(@"Purpose: %@", configOptions[key][@"description"]);
@@ -153,7 +163,7 @@ BOOL debugLogging = NO;
         }
         SKLog(@"");
     }
-    
+
     SKLog(@"");
     SKLog(@"Examples:");
     SKLog(@"");
@@ -163,7 +173,7 @@ BOOL debugLogging = NO;
     SKLog(@"   ^-- Scan and place in %@/bills/ with alias in %@/dental/",
           configOptions[ScanlineConfigOptionDir][@"default"],
           configOptions[ScanlineConfigOptionDir][@"default"]);
-    
+
 }
 
 - (void)loadConfigurationDefaults
@@ -211,7 +221,7 @@ BOOL debugLogging = NO;
             exit(1);
         } else if([theArg hasPrefix:@"-"]) {
             NSString *canonicalKey = [ScanConfiguration canonicalConfigKeyFor:[theArg substringFromIndex:1]];
-            
+
             if (canonicalKey == nil) {
                 SKLog(@"WARNING: Unknown option '%@' will be ignored", theArg);
             } else {
@@ -244,24 +254,3 @@ BOOL debugLogging = NO;
 }
 
 @end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

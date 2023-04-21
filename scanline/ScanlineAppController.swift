@@ -5,9 +5,9 @@
 //  Created by Scott J. Kleper on 12/2/17.
 //
 
+import AppKit
 import Foundation
 import ImageCaptureCore
-import AppKit
 import Quartz
 
 class ScanlineAppController: NSObject, ScannerBrowserDelegate, ScannerControllerDelegate {
@@ -19,7 +19,7 @@ class ScanlineAppController: NSObject, ScannerBrowserDelegate, ScannerController
     var scannerController: ScannerController?
     
     init(arguments: [String]) {
-        configuration = ScanConfiguration(arguments: Array(arguments[1..<arguments.count]))
+        configuration = ScanConfiguration(arguments: Array(arguments[1 ..< arguments.count]))
 //        configuration = ScanConfiguration(arguments: ["-flatbed", "house", "-v"])
 //        configuration = ScanConfiguration(arguments: ["-scanner", "Dell Color MFP E525w (31:4D:90)", "-exact", "-v"])
 //        configuration = ScanConfiguration(arguments: ["-scanner", "epson", "-v", "-resolution", "600"])
@@ -36,7 +36,7 @@ class ScanlineAppController: NSObject, ScannerBrowserDelegate, ScannerController
     func go() {
         scannerBrowser.browse()
         
-        let timerExpiration:Double = Double(configuration.config[ScanlineConfigOptionBrowseSecs] as? String ?? "10") ?? 10.0
+        let timerExpiration = Double(configuration.config[ScanlineConfigOptionBrowseSecs] as? String ?? "10") ?? 10.0
         scannerBrowserTimer = Timer.scheduledTimer(withTimeInterval: timerExpiration, repeats: false) { _ in
             self.scannerBrowser.stopBrowsing()
         }
@@ -85,7 +85,6 @@ class ScanlineAppController: NSObject, ScannerBrowserDelegate, ScannerController
     func scannerControllerDidSucceed(_ scannerController: ScannerController) {
         exit()
     }
-
 }
 
 protocol ScannerControllerDelegate: class {
@@ -127,8 +126,12 @@ class ScannerController: NSObject, ICScannerDeviceDelegate {
         delegate?.scannerControllerDidFail(self)
     }
     
-    func device(_ device: ICDevice, didCloseSessionWithError error: Error) {
-        logger.verbose("didCloseSessionWithError: \(error.localizedDescription)")
+    func device(_ device: ICDevice, didCloseSessionWithError error: Error?) {
+        if error != nil {
+            logger.verbose("didCloseSessionWithError: \(error!.localizedDescription)")
+        } else {
+            logger.verbose("didCloseSessionWithError: <no error passed>")
+        }
         delegate?.scannerControllerDidFail(self)
     }
     
@@ -142,8 +145,7 @@ class ScannerController: NSObject, ICScannerDeviceDelegate {
         }
     }
     
-    func didRemove(_ device: ICDevice) {
-    }
+    func didRemove(_ device: ICDevice) {}
     
     func deviceDidBecomeReady(_ device: ICDevice) {
         logger.verbose("deviceDidBecomeReady")
@@ -154,7 +156,7 @@ class ScannerController: NSObject, ICScannerDeviceDelegate {
         logger.verbose("didSelectFunctionalUnit: \(functionalUnit) error: \(error?.localizedDescription ?? "[no error]")")
         
         // NOTE: Despite the fact that `functionalUnit` is not an optional, it still sometimes comes in as `nil` even when `error` is `nil`
-        if functionalUnit != nil && functionalUnit.type == self.desiredFunctionalUnitType {
+        if functionalUnit != nil && functionalUnit.type == desiredFunctionalUnitType {
             configureScanner()
             logger.log("Starting scan...")
             scanner.requestScan()
@@ -176,7 +178,7 @@ class ScannerController: NSObject, ICScannerDeviceDelegate {
             return
         }
 
-        if self.configuration.config[ScanlineConfigOptionBatch] != nil {
+        if configuration.config[ScanlineConfigOptionBatch] != nil {
             logger.log("Press RETURN to scan next page or S to stop")
             let userInput = String(format: "%c", getchar())
             if !"sS".contains(userInput) {
@@ -186,7 +188,7 @@ class ScannerController: NSObject, ICScannerDeviceDelegate {
             }
         }
 
-        let outputProcessor = ScanlineOutputProcessor(urls: self.scannedURLs, configuration: configuration, logger: logger)
+        let outputProcessor = ScanlineOutputProcessor(urls: scannedURLs, configuration: configuration, logger: logger)
         if outputProcessor.process() {
             delegate?.scannerControllerDidSucceed(self)
         } else {
@@ -197,7 +199,7 @@ class ScannerController: NSObject, ICScannerDeviceDelegate {
     // MARK: Private Methods
     
     fileprivate func selectFunctionalUnit() {
-        scanner.requestSelect(self.desiredFunctionalUnitType)
+        scanner.requestSelect(desiredFunctionalUnitType)
     }
     
     fileprivate func configureScanner() {
@@ -230,10 +232,88 @@ class ScannerController: NSObject, ICScannerDeviceDelegate {
         
         if configuration.config[ScanlineConfigOptionTIFF] != nil {
             scanner.documentUTI = kUTTypeTIFF as String
+        } else if configuration.config[ScanlineConfigOptionPNG] != nil {
+            scanner.documentUTI = kUTTypePNG as String
         } else {
             scanner.documentUTI = kUTTypeJPEG as String
         }
     }
+
+    struct documentType {
+        var name: String
+        let documentType: ICScannerDocumentType
+        var notes: String?
+        var dimensionsImperial: String?
+        var dimensionsMetric: String?
+        var ratio: String?
+    }
+    
+    let documentTypes = [
+        "default": documentType(name: "Default", documentType: .typeDefault, notes: "This is the platten size. Not valid for scanners without a platten."),
+        "a4": documentType(name: "A4", documentType: .typeA4, dimensionsMetric: "210.00 mm x 297.00 mm"),
+        "b5": documentType(name: "B5/JIS B5", documentType: .typeB5, dimensionsMetric: "182.00 mm x 257.00 mm"),
+        "usletter": documentType(name: "US Letter", documentType: .typeUSLetter, dimensionsImperial: "8.5\" x 11.0\"", dimensionsMetric: "215.90 mm x 279.40 mm"),
+        "uslegal": documentType(name: "US Legal", documentType: .typeUSLegal, dimensionsImperial: "8.5\" x 14.0\"", dimensionsMetric: "215.90 mm x 355.60 mm"),
+        "a5": documentType(name: "A5", documentType: .typeA5, dimensionsMetric: "148.00 mm x 210.00 mm"),
+        "isob4": documentType(name: "B4/ISO B4", documentType: .typeISOB4, dimensionsMetric: "250.00 mm x 353.00 mm"),
+        "isob6": documentType(name: "B6/ISO B6", documentType: .typeISOB6, dimensionsMetric: "125.00 mm x 176.00 mm"),
+        "usledger": documentType(name: "US Ledger", documentType: .typeUSLedger, dimensionsImperial: "11\" x 17.0\"", dimensionsMetric: "279.40 mm x 431.80 mm"),
+        "usexecutive": documentType(name: "US Executive", documentType: .typeUSExecutive, dimensionsImperial: "7.25\" x 10.5\"", dimensionsMetric: "184.15 mm x 266.70 mm"),
+        "a3": documentType(name: "A3", documentType: .typeA3, dimensionsMetric: "297.00 mm x 420.00 mm"),
+        "isob3": documentType(name: "B3/ISO B3", documentType: .typeISOB3, dimensionsMetric: "353.00 mm x 500.00 mm"),
+        "a6": documentType(name: "A6", documentType: .typeA6, dimensionsMetric: "105.00 mm x 148.00 mm"),
+        "c4": documentType(name: "C4", documentType: .typeC4, dimensionsMetric: "229.00 mm x 324.00 mm"),
+        "c5": documentType(name: "C5", documentType: .typeC5, dimensionsMetric: "162.00 mm x 229.00 mm"),
+        "c6": documentType(name: "C6", documentType: .typeC6, dimensionsMetric: "114.00 mm x 162.00 mm"),
+        "4a0": documentType(name: "4A0", documentType: .type4A0, dimensionsMetric: "1682.00 mm x 2378.00 mm"),
+        "2a0": documentType(name: "2A0", documentType: .type2A0, dimensionsMetric: "1189.00 mm x 1682.00 mm"),
+        "a0": documentType(name: "A0", documentType: .typeA0, dimensionsMetric: "841.00 mm x 1189.00 mm"),
+        "a1": documentType(name: "A1", documentType: .typeA1, dimensionsMetric: "594.00 mm x 841.00 mm"),
+        "a2": documentType(name: "A2", documentType: .typeA2, dimensionsMetric: "420.00 mm x 594.00 mm"),
+        "a7": documentType(name: "A7", documentType: .typeA7, dimensionsMetric: "74.00 mm x 105.00 mm"),
+        "a8": documentType(name: "A8", documentType: .typeA8, dimensionsMetric: "52.00 mm x 74.00 mm"),
+        "a9": documentType(name: "A9", documentType: .typeA9, dimensionsMetric: "37.00 mm x 52.00 mm"),
+        "10": documentType(name: "A10", documentType: .type10, dimensionsMetric: "26.00 mm x 37.00 mm"),
+        "isob0": documentType(name: "ISO B0", documentType: .typeISOB0, dimensionsMetric: "1000.00 mm x 1414.00 mm"),
+        "isob1": documentType(name: "ISO B1", documentType: .typeISOB1, dimensionsMetric: "707.00 mm x 1000.00 mm"),
+        "isob2": documentType(name: "ISO B2", documentType: .typeISOB2, dimensionsMetric: "500.00 mm x 707.00 mm"),
+        "isob5": documentType(name: "ISO B5", documentType: .typeISOB5, dimensionsMetric: "176.00 mm x 250.00 mm"),
+        "isob7": documentType(name: "ISO B7", documentType: .typeISOB7, dimensionsMetric: "88.00 mm x 125.00 mm"),
+        "isob8": documentType(name: "ISO B8", documentType: .typeISOB8, dimensionsMetric: "62.00 mm x 88.00 mm"),
+        "isob9": documentType(name: "ISO B9", documentType: .typeISOB9, dimensionsMetric: "44.00 mm x 62.00 mm"),
+        "isob10": documentType(name: "ISO B10", documentType: .typeISOB10, dimensionsMetric: "31.00 mm x 44.00 mm"),
+        "jisb0": documentType(name: "JIS B0", documentType: .typeJISB0, dimensionsMetric: "1030.00 mm x 1456.00 mm"),
+        "jisb1": documentType(name: "JIS B1", documentType: .typeJISB1, dimensionsMetric: "728.00 mm x 1030.00 mm"),
+        "jisb2": documentType(name: "JIS B2", documentType: .typeJISB2, dimensionsMetric: "515.00 mm x 728.00 mm"),
+        "jisb3": documentType(name: "JIS B3", documentType: .typeJISB3, dimensionsMetric: "364.00 mm x 515.00 mm"),
+        "jisb4": documentType(name: "JIS B4", documentType: .typeJISB4, dimensionsMetric: "257.00 mm x 364.00 mm"),
+        "jisb6": documentType(name: "JIS B6", documentType: .typeJISB6, dimensionsMetric: "128.00 mm x 182.00 mm"),
+        "jisb7": documentType(name: "JIS B7", documentType: .typeJISB7, dimensionsMetric: "91.00 mm x 128.00 mm"),
+        "jisb8": documentType(name: "JIS B8", documentType: .typeJISB8, dimensionsMetric: "64.00 mm x 91.00 mm"),
+        "jisb9": documentType(name: "JIS B9", documentType: .typeJISB9, dimensionsMetric: "45.00 mm x 64.00 mm"),
+        "jisb10": documentType(name: "JIS B10", documentType: .typeJISB10, dimensionsMetric: "32.00 mm x 45.00 mm"),
+        "c0": documentType(name: "C0", documentType: .typeC0, dimensionsMetric: "917.00 mm x 1297.00 mm"),
+        "c1": documentType(name: "C1", documentType: .typeC1, dimensionsMetric: "648.00 mm x 917.00 mm"),
+        "c2": documentType(name: "C2", documentType: .typeC2, dimensionsMetric: "458.00 mm x 648.00 mm"),
+        "c3": documentType(name: "C3", documentType: .typeC3, dimensionsMetric: "324.00 mm x 458.00 mm"),
+        "c7": documentType(name: "C7", documentType: .typeC7, dimensionsMetric: "81.00 mm x 114.00 mm"),
+        "c8": documentType(name: "C8", documentType: .typeC8, dimensionsMetric: "57.00 mm x 81.00 mm"),
+        "c9": documentType(name: "C9", documentType: .typeC9, dimensionsMetric: "40.00 mm x 57.00 mm"),
+        "c10": documentType(name: "C10", documentType: .typeC10, dimensionsMetric: "28.00 mm x 40.00 mm"),
+        "usstatement": documentType(name: "US Statement", documentType: .typeUSStatement, dimensionsImperial: "5.5\" x 8.5\"", dimensionsMetric: "139.70 mm x 215.90 mm"),
+        "businesscard": documentType(name: "Business Card", documentType: .typeBusinessCard, dimensionsMetric: "90.00 mm x 55.00 mm"),
+        "e": documentType(name: "Japanese E", documentType: .typeE, dimensionsImperial: "3.25\" x 4.75\"", dimensionsMetric: "82.55 mm x 120.65 mm"),
+        "3r": documentType(name: "3R", documentType: .type3R, dimensionsImperial: "3.5\" x 5\"", dimensionsMetric: "88.90 mm x 127.00 mm", ratio: "7:10"),
+        "4r": documentType(name: "4R", documentType: .type4R, dimensionsImperial: "4\" x 6\"", dimensionsMetric: "101.60 mm x 152.40 mm", ratio: "2:3"),
+        "5r": documentType(name: "5R", documentType: .type5R, dimensionsImperial: "5\" x 7\"", dimensionsMetric: "127.00 mm x 177.80 mm", ratio: "5:7"),
+        "6r": documentType(name: "6R", documentType: .type6R, dimensionsImperial: "6\" x 8\"", dimensionsMetric: "152.40 mm x 203.20 mm", ratio: "3:4"),
+        "8r": documentType(name: "8R", documentType: .type8R, dimensionsImperial: "8\" x 10\"", dimensionsMetric: "203.20 mm x 254.00 mm", ratio: "4:5"),
+        "10r": documentType(name: "10R", documentType: .type10R, dimensionsImperial: "10\" x 12\"", dimensionsMetric: "254.00 mm x 304.80 mm", ratio: "5:6"),
+        "s10r": documentType(name: "S10R", documentType: .typeS10R, dimensionsImperial: "10\" x 15\"", dimensionsMetric: "254.00 mm x 381.00 mm", ratio: "2:3"),
+        "11r": documentType(name: "11R", documentType: .type11R, dimensionsImperial: "11\" x 14\"", dimensionsMetric: "279.40 mm x 355.60 mm"),
+        "12r": documentType(name: "12R", documentType: .type12R, dimensionsImperial: "12\" x 15\"", dimensionsMetric: "304.80 mm x 381.00 mm", ratio: "4:5"),
+        "s12r": documentType(name: "S12R", documentType: .typeS12R, dimensionsImperial: "12\" x 18\"", dimensionsMetric: "304.80 mm x 457.20 mm", ratio: "2:3"),     
+    ]
 
     fileprivate func configureDocumentFeeder() {
         logger.verbose("Configuring Document Feeder")
@@ -241,12 +321,31 @@ class ScannerController: NSObject, ICScannerDeviceDelegate {
         guard let functionalUnit = scanner.selectedFunctionalUnit as? ICScannerFunctionalUnitDocumentFeeder else { return }
         
         functionalUnit.documentType = { () -> ICScannerDocumentType in
+            
             if configuration.config[ScanlineConfigOptionLegal] != nil {
                 return .typeUSLegal
             }
             if configuration.config[ScanlineConfigOptionA4] != nil {
                 return .typeA4
             }
+            if configuration.config[ScanlineConfigOptionLedger] != nil {
+                return .typeUSLedger
+            }
+            
+            if configuration.config[ScanlineConfigOptionDocumentType] != nil {
+                if let docstring = configuration.config[ScanlineConfigOptionDocumentType] as? String {
+                    if let doctype = documentTypes[docstring] {
+                        return doctype.documentType
+                    } else {
+                        logger.log("ERROR: Invalid documenttype \(docstring)")
+                        exit(-1)
+                    }
+                } else {
+                    logger.log("ERROR: Invalid documenttype")
+                    exit(-1)
+                }
+            }
+            
             return .typeUSLetter
         }()
         
@@ -274,6 +373,7 @@ extension Int {
         return String(format: "%ld", self)
     }
 }
+
 class ScanlineOutputProcessor {
     let logger: Logger
     let configuration: ScanConfiguration
@@ -286,7 +386,9 @@ class ScanlineOutputProcessor {
     }
     
     func process() -> Bool {
-        let wantsPDF = configuration.config[ScanlineConfigOptionJPEG] == nil && configuration.config[ScanlineConfigOptionTIFF] == nil
+        let wantsPDF = configuration.config[ScanlineConfigOptionJPEG] == nil
+            && configuration.config[ScanlineConfigOptionTIFF] == nil
+            && configuration.config[ScanlineConfigOptionPNG] == nil
         if !wantsPDF {
             for url in urls {
                 outputAndTag(url: url)
@@ -345,6 +447,8 @@ class ScanlineOutputProcessor {
             destinationFileExtension = "tif"
         } else if configuration.config[ScanlineConfigOptionJPEG] != nil {
             destinationFileExtension = "jpg"
+        } else if configuration.config[ScanlineConfigOptionPNG] != nil {
+            destinationFileExtension = "png"
         } else {
             destinationFileExtension = "pdf"
         }
@@ -374,7 +478,7 @@ class ScanlineOutputProcessor {
         }
 
         // Alias to all other tag locations
-        // todo: this is super repetitive with above...
+        // TODO: this is super repetitive with above...
         if configuration.tags.count > 1 {
             for tag in configuration.tags.subarray(with: NSMakeRange(1, configuration.tags.count - 1)) {
                 logger.verbose("Aliasing to tag \(tag)")
