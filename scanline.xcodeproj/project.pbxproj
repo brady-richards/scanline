@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3C966D1029FB336F00642DEE /* scanline in CopyFiles */ = {isa = PBXBuildFile; fileRef = FCF90C3B1FD3534B00EAF3D1 /* scanline */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		FCD75D391FF2E1D50041D955 /* ScanConfigurationTests.m in Sources */ = {isa = PBXBuildFile; fileRef = FCD75D381FF2E1D50041D955 /* ScanConfigurationTests.m */; };
 		FCD75D451FF2E9300041D955 /* config_test.conf in Resources */ = {isa = PBXBuildFile; fileRef = FCD75D441FF2E9300041D955 /* config_test.conf */; };
 		FCD75D6A1FF2ED220041D955 /* ScanConfiguration.m in Sources */ = {isa = PBXBuildFile; fileRef = FCF90C461FD3536700EAF3D1 /* ScanConfiguration.m */; };
@@ -34,12 +35,13 @@
 /* Begin PBXCopyFilesBuildPhase section */
 		FCF90C391FD3534B00EAF3D1 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = /usr/share/man/man1/;
+			buildActionMask = 12;
+			dstPath = /Users/brichards/bin/local;
 			dstSubfolderSpec = 0;
 			files = (
+				3C966D1029FB336F00642DEE /* scanline in CopyFiles */,
 			);
-			runOnlyForDeploymentPostprocessing = 1;
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
