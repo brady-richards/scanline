@@ -22,6 +22,14 @@
 		FC4DE23426484B4E00E2A900 /* libscanline.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC4DE2142648287D00E2A900 /* libscanline.framework */; };
 		FC4DE2AF264E1FB000E2A900 /* ScannerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC4DE2AE264E1FB000E2A900 /* ScannerController.swift */; };
 		FC4DE2B1264E1FEC00E2A900 /* ScanlineOutputProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC4DE2B0264E1FEC00E2A900 /* ScanlineOutputProcessor.swift */; };
+		3C966D1029FB336F00642DEE /* scanline in CopyFiles */ = {isa = PBXBuildFile; fileRef = FCF90C3B1FD3534B00EAF3D1 /* scanline */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		FCD75D391FF2E1D50041D955 /* ScanConfigurationTests.m in Sources */ = {isa = PBXBuildFile; fileRef = FCD75D381FF2E1D50041D955 /* ScanConfigurationTests.m */; };
+		FCD75D451FF2E9300041D955 /* config_test.conf in Resources */ = {isa = PBXBuildFile; fileRef = FCD75D441FF2E9300041D955 /* config_test.conf */; };
+		FCD75D6A1FF2ED220041D955 /* ScanConfiguration.m in Sources */ = {isa = PBXBuildFile; fileRef = FCF90C461FD3536700EAF3D1 /* ScanConfiguration.m */; };
+		FCD75D6B1FF2ED4D0041D955 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF90C3E1FD3534B00EAF3D1 /* main.swift */; };
+		FCD75D6C1FF2ED4D0041D955 /* ScanlineAppController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF90C491FD3537400EAF3D1 /* ScanlineAppController.swift */; };
+		FCD75D6F1FF2ED4D0041D955 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF90C4B1FD3543D00EAF3D1 /* Logger.swift */; };
+		FCD75D701FF2ED4D0041D955 /* ScannerBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF90C4F1FD39E3300EAF3D1 /* ScannerBrowser.swift */; };
 		FCF90C3F1FD3534B00EAF3D1 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF90C3E1FD3534B00EAF3D1 /* main.swift */; };
 		FCF90C4A1FD3537400EAF3D1 /* ScanlineAppController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF90C491FD3537400EAF3D1 /* ScanlineAppController.swift */; };
 /* End PBXBuildFile section */
@@ -49,13 +57,14 @@
 		};
 		FCF90C391FD3534B00EAF3D1 /* Copy Files */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = /usr/share/man/man1/;
+			buildActionMask = 12;
+			dstPath = /Users/brichards/bin/local;
 			dstSubfolderSpec = 0;
 			files = (
+				3C966D1029FB336F00642DEE /* scanline in CopyFiles */,
 			);
 			name = "Copy Files";
-			runOnlyForDeploymentPostprocessing = 1;
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
