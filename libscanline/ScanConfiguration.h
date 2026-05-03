@@ -16,14 +16,9 @@ static NSString * const ScanlineConfigOptionDuplex = @"duplex";
 static NSString * const ScanlineConfigOptionBatch = @"batch";
 static NSString * const ScanlineConfigOptionList = @"list";
 static NSString * const ScanlineConfigOptionFlatbed = @"flatbed";
-static NSString * const ScanlineConfigOptionJPEG = @"jpeg";
-static NSString * const ScanlineConfigOptionTIFF = @"tiff";
-static NSString * const ScanlineConfigOptionPNG = @"png";
-static NSString * const ScanlineConfigOptionDocumentType = @"documenttype";
-static NSString * const ScanlineConfigOptionLedger = @"ledger";
-static NSString * const ScanlineConfigOptionLegal = @"legal";
-static NSString * const ScanlineConfigOptionLetter = @"letter";
-static NSString * const ScanlineConfigOptionA4 = @"a4";
+static NSString * const ScanlineConfigOptionFormat = @"format";
+static NSString * const ScanlineConfigOptionPageSize = @"page-size";
+static NSString * const ScanlineConfigOptionListPageSizes = @"list-page-sizes";
 static NSString * const ScanlineConfigOptionMono = @"mono";
 static NSString * const ScanlineConfigOptionOpen = @"open";
 static NSString * const ScanlineConfigOptionDir = @"dir";
@@ -44,6 +39,12 @@ static NSString * const ScanlineConfigOptionExactName = @"exactname";
 - (nonnull id)initWithArguments:(nonnull NSArray *)inArguments configFilePath:(NSString *)configFilePath;
 
 + (nonnull NSDictionary *)configOptions;
+
+/** One of: pdf, jpeg, tiff, png (after normalization from --format or legacy flags). */
+- (NSString *)normalizedScanOutputFormat;
+
+/** Canonical page-size key (e.g. usletter, a4); see --page-size help. */
+- (NSString *)normalizedPageSizeCatalogKey;
 
 @end
 

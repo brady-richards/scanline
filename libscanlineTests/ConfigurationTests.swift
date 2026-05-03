@@ -32,20 +32,48 @@ class ConfigurationTests: XCTestCase {
     
     func testGettingTagsFromCommandLine() {
         let testConfig = ScanConfiguration(arguments: ["taxes-2013"], configFilePath: testConfigPath)
-        
+
         XCTAssertEqual(testConfig.tags.firstObject as? String, "taxes-2013")
+    }
+
+    func testFlatbedDoubleDashOption() {
+        let testConfig = ScanConfiguration(arguments: ["--flatbed"])
+        XCTAssertTrue(testConfig.config[ScanlineConfigOptionFlatbed] as? Bool == true)
+    }
+
+    func testStringOptionEqualsSyntax() {
+        let testConfig = ScanConfiguration(arguments: ["--resolution=450"])
+        XCTAssertEqual(testConfig.config[ScanlineConfigOptionResolution] as? String ?? "", "450")
+    }
+
+    func testDefaultFormatIsPdf() {
+        let testConfig = ScanConfiguration(arguments: [])
+        XCTAssertEqual(testConfig.normalizedScanOutputFormat(), "pdf")
+    }
+
+    func testFormatEqualsSyntax() {
+        let testConfig = ScanConfiguration(arguments: ["--format=tiff"])
+        XCTAssertEqual(testConfig.normalizedScanOutputFormat(), "tiff")
+    }
+
+    func testFormatSynonymLowercaseJpg() {
+        let testConfig = ScanConfiguration(arguments: ["--format=jpg"])
+        XCTAssertEqual(testConfig.normalizedScanOutputFormat(), "jpeg")
+    }
+
+    func testInvalidFormatFallsBackToPdf() {
+        let testConfig = ScanConfiguration(arguments: ["--format=wav"])
+        XCTAssertEqual(testConfig.normalizedScanOutputFormat(), "pdf")
     }
 
     func testJpegOption() {
         let testConfig = ScanConfiguration(arguments: ["-jpeg"])
-        
-        XCTAssertTrue(testConfig.config[ScanlineConfigOptionJPEG] as? Bool == true)
+        XCTAssertEqual(testConfig.normalizedScanOutputFormat(), "jpeg")
     }
 
     func testJpegOptionWithJpg() {
         let testConfig = ScanConfiguration(arguments: ["-jpg"])
-        
-        XCTAssertTrue(testConfig.config[ScanlineConfigOptionJPEG] as? Bool == true)
+        XCTAssertEqual(testConfig.normalizedScanOutputFormat(), "jpeg")
     }
 
     func testResolutionOptionWithNonNumericalValue() {
@@ -54,18 +82,34 @@ class ConfigurationTests: XCTestCase {
         XCTAssertNil(testConfig.config[ScanlineConfigOptionResolution] as? Int)
     }
     
-    func testLetterNotLegal() {
-        let testConfig = ScanConfiguration(arguments: ["-letter"])
-        
-        XCTAssertTrue(testConfig.config[ScanlineConfigOptionLetter] as? Bool == true)
-        XCTAssertFalse(testConfig.config[ScanlineConfigOptionLegal] as? Bool == true)
+    func testLetterNotLegalPageSize() {
+        let letter = ScanConfiguration(arguments: ["-letter"])
+        XCTAssertEqual(letter.normalizedPageSizeCatalogKey(), "usletter")
+        XCTAssertNotEqual(letter.normalizedPageSizeCatalogKey(), "uslegal")
+
+        let legal = ScanConfiguration(arguments: ["-legal"])
+        XCTAssertEqual(legal.normalizedPageSizeCatalogKey(), "uslegal")
+        XCTAssertNotEqual(legal.normalizedPageSizeCatalogKey(), "usletter")
     }
-    
-    func testLegalNotLetter() {
-        let testConfig = ScanConfiguration(arguments: ["-legal"])
-        
-        XCTAssertFalse(testConfig.config[ScanlineConfigOptionLetter] as? Bool == true)
-        XCTAssertTrue(testConfig.config[ScanlineConfigOptionLegal] as? Bool == true)
+
+    func testPageSizeEqualsSyntax() {
+        let testConfig = ScanConfiguration(arguments: ["--page-size=a4"])
+        XCTAssertEqual(testConfig.normalizedPageSizeCatalogKey(), "a4")
+    }
+
+    func testLedgerLegacyFlag() {
+        let testConfig = ScanConfiguration(arguments: ["--ledger"])
+        XCTAssertEqual(testConfig.normalizedPageSizeCatalogKey(), "usledger")
+    }
+
+    func testListPageSizesSetsFlag() {
+        let testConfig = ScanConfiguration(arguments: ["--list-page-sizes"])
+        XCTAssertEqual(testConfig.config[ScanlineConfigOptionListPageSizes] as? Bool, true)
+    }
+
+    func testDocumentTypeDeprecatedSynonym() {
+        let testConfig = ScanConfiguration(arguments: ["--document-type", "uslegal"])
+        XCTAssertEqual(testConfig.normalizedPageSizeCatalogKey(), "uslegal")
     }
     
     func testMissingSecondParameter() {

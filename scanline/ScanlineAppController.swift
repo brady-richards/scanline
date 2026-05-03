@@ -57,22 +57,57 @@ class ScanlineAppController: NSObject {
 
 extension ScanlineAppController: ScannerBrowserDelegate {
     func scannerBrowser(_ scannerBrowser: ScannerBrowser, didFinishBrowsingWithScanner scanner: ICScannerDevice?) {
+        let run: () -> Void = { [self] in
         logger.verbose("Found scanner: \(scanner?.name ?? "[nil]")")
         scannerBrowserTimer?.invalidate()
         scannerBrowserTimer = nil
-        
+
         guard configuration.config[ScanlineConfigOptionList] == nil else {
             exit()
             return
         }
-        
+
+        if configuration.config[ScanlineConfigOptionListPageSizes] != nil {
+            guard let scanner = scanner else {
+                logger.log("No scanner was found.")
+                exit()
+                return
+            }
+            let wantsFlatbed = configuration.config[ScanlineConfigOptionFlatbed] != nil
+            let keys = PageSizeLister.supportedCatalogKeysFromScannerSync(
+                scanner: scanner,
+                wantsFlatbed: wantsFlatbed
+            )
+            if keys.isEmpty {
+                let deviceLabel = scanner.name ?? "selected scanner"
+                if wantsFlatbed {
+                    logger.log("scanline: `\(deviceLabel)' reported no Image Capture page presets for the flatbed.")
+                } else {
+                    logger.log("scanline: `\(deviceLabel)' reported no page presets for ADF or flatbed via Image Capture (try `--flatbed --list-page-sizes' for flatbed-only).")
+                }
+            } else {
+                for line in PageSizeCatalog.listingTableLines(catalogKeysInOrder: keys) {
+                    logger.log(line)
+                }
+            }
+            exit()
+            return
+        }
+
         guard let scanner = scanner else {
             logger.log("No scanner was found.")
             exit()
             return
         }
-        
+
         scan(scanner: scanner)
+        }
+
+        if Thread.isMainThread {
+            run()
+        } else {
+            DispatchQueue.main.sync(execute: run)
+        }
     }
     
     func scannerBrowser(_ scannerBrowser: ScannerBrowser, didUpdateAvailableScanners availableScanners: [String]) {

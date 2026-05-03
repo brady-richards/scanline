@@ -7,12 +7,146 @@
 //
 
 #import "ScanConfiguration.h"
-// #import "scanline-Swift.h"
 
 BOOL debugLogging = NO;
 
+@interface ScanConfiguration (SKOptionParsingForward)
++ (NSString*)canonicalConfigKeyFor:(NSString*)key;
+@end
+
+static NSString *SKStripOptionalEqualsValue(NSString *__nonnull token, NSString *__nullable *equalValueOut)
+{
+    NSRange eq = [token rangeOfString:@"="];
+    if (eq.location == NSNotFound) {
+        if (equalValueOut)
+            *equalValueOut = nil;
+        return token;
+    }
+    if (equalValueOut)
+        *equalValueOut = [token substringFromIndex:NSMaxRange(eq)];
+    return [token substringToIndex:eq.location];
+}
+
+static NSString *__nullable SKBareOptionName(NSString *__nonnull fullArg)
+{
+    if ([fullArg hasPrefix:@"--"]) {
+        NSString *body = SKStripOptionalEqualsValue([fullArg substringFromIndex:2], NULL);
+        return body.length > 0 ? body : nil;
+    }
+    if ([fullArg hasPrefix:@"-"] && fullArg.length >= 2) {
+        NSString *body = SKStripOptionalEqualsValue([fullArg substringFromIndex:1], NULL);
+        return body.length > 0 ? body : nil;
+    }
+    return nil;
+}
+
+/** Legacy per-format flags (--jpeg, --tiff, -jpg, ...) map onto --format internally. */
+static NSString *__nullable SKLegacyCanonicalFormatFromBareOption(NSString *__nullable bare)
+{
+    if (bare.length == 0)
+        return nil;
+    NSString *lb = bare.lowercaseString;
+    if ([lb isEqualToString:@"jpeg"] || [lb isEqualToString:@"jpg"]) {
+        return @"jpeg";
+    }
+    if ([lb isEqualToString:@"tiff"] || [lb isEqualToString:@"tif"]) {
+        return @"tiff";
+    }
+    if ([lb isEqualToString:@"png"]) {
+        return @"png";
+    }
+    return nil;
+}
+
+/** Legacy --legal / --letter / --ledger / -a4 map onto --page-size. */
+static NSString *__nullable SKLegacyCanonicalPageFromBareOption(NSString *__nullable bare)
+{
+    if (bare.length == 0)
+        return nil;
+    NSString *lb = bare.lowercaseString;
+    if ([lb isEqualToString:@"legal"])
+        return @"uslegal";
+    if ([lb isEqualToString:@"letter"])
+        return @"usletter";
+    if ([lb isEqualToString:@"ledger"])
+        return @"usledger";
+    if ([lb isEqualToString:@"tabloid"])
+        return @"usledger";
+    if ([lb isEqualToString:@"a4"])
+        return @"a4";
+    return nil;
+}
+
+static BOOL SKArgIsHelp(NSString *arg)
+{
+    if (arg.length == 0)
+        return NO;
+    NSSet *tokens = [NSSet setWithObjects:@"-help", @"--help", @"-?", @"--usage", nil];
+    if ([tokens containsObject:arg])
+        return YES;
+    if ([arg isEqualToString:@"-h"])
+        return YES;
+    NSString *bareHelp = SKBareOptionName(arg);
+    return bareHelp.length > 0 && [bareHelp caseInsensitiveCompare:@"help"] == NSOrderedSame;
+}
+
+static BOOL SKLooksLikeKnownOption(BOOL optionsActive, NSString *__nonnull token)
+{
+    if (!optionsActive || token.length == 0)
+        return NO;
+    if (![token hasPrefix:@"-"])
+        return NO;
+    if ([token isEqualToString:@"-"])
+        return NO;
+    NSString *bare = SKBareOptionName(token);
+    if (bare.length == 0)
+        return NO;
+    if (SKLegacyCanonicalFormatFromBareOption(bare) != nil)
+        return YES;
+    if (SKLegacyCanonicalPageFromBareOption(bare) != nil)
+        return YES;
+    if ([bare caseInsensitiveCompare:@"documenttype"] == NSOrderedSame)
+        return YES;
+    if ([bare caseInsensitiveCompare:@"document-type"] == NSOrderedSame)
+        return YES;
+    return [ScanConfiguration canonicalConfigKeyFor:bare] != nil;
+}
+
+static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, NSDictionary *__nonnull details)
+{
+    NSArray *synonyms = details[@"synonyms"];
+    if (![synonyms isKindOfClass:[NSArray class]])
+        synonyms = @[];
+    BOOL isString = [details[@"type"] isEqualToString:@"string"];
+    NSString *metavar = details[@"metavar"];
+
+    NSMutableArray *ordered = [NSMutableArray array];
+    for (NSString *s in synonyms) {
+        if (s.length != 1)
+            continue;
+        [ordered addObject:[NSString stringWithFormat:@"-%@", s]];
+    }
+    [ordered addObject:[NSString stringWithFormat:@"--%@", canonicalKey]];
+
+    NSMutableSet *synLongSeen = [NSMutableSet setWithObject:canonicalKey];
+    for (NSString *s in synonyms) {
+        if (s.length <= 1 || [synLongSeen containsObject:s])
+            continue;
+        [synLongSeen addObject:s];
+        [ordered addObject:[NSString stringWithFormat:@"--%@", s]];
+    }
+
+    NSString *joined = [ordered componentsJoinedByString:@", "];
+    if (isString && metavar.length > 0)
+        joined = [joined stringByAppendingFormat:@" %@", metavar];
+    return joined;
+}
+
 @interface ScanConfiguration()
 @end
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wincomplete-implementation"
 
 @implementation ScanConfiguration
 
@@ -36,32 +170,21 @@ BOOL debugLogging = NO;
                      @"synonyms": @[@"fb"],
                      @"description": @"Scan from the scanner's flatbed (default is paper feeder)"
                      },
-             ScanlineConfigOptionJPEG: @{
-                     @"synonyms": @[@"jpg"],
-                     @"description": @"Scan to a JPEG file (default is PDF)"
+             ScanlineConfigOptionFormat: @{
+                     @"type": @"string",
+                     @"metavar": @"FMT",
+                     @"default": @"pdf",
+                     @"description": @"Output format: pdf, jpeg (or jpg), tiff (or tif), or png.",
                      },
-             ScanlineConfigOptionTIFF: @{
-                     @"synonyms": @[@"tif"],
-                     @"description": @"Scan to a TIFF file (default is PDF)"
+             ScanlineConfigOptionPageSize: @{
+                     @"type": @"string",
+                     @"metavar": @"SIZE",
+                     @"default": @"usletter",
+                     @"description": @"Page/document size preset (catalog key from --list-page-sizes).",
                      },
-             ScanlineConfigOptionPNG: @{
-                     @"description": @"Scan to a PNG file (default is PDF)"
-                     },
-             ScanlineConfigOptionDocumentType: @{
-                     @"type" : @"string",
-                     @"description": @"Document type to scan"
-                     },
-             ScanlineConfigOptionLegal: @{
-                     @"description": @"Scan a legal size page"
-                     },
-             ScanlineConfigOptionLetter: @{
-                     @"description": @"Scan a letter size page"
-                     },
-             ScanlineConfigOptionLedger: @{
-                     @"description": @"Scan a ledger size page"
-                        },
-             ScanlineConfigOptionA4: @{
-                     @"description": @"Scan a A4 size page"
+             ScanlineConfigOptionListPageSizes: @{
+                     @"type": @"flag",
+                     @"description": @"List page sizes (preset id, name, dimensions) from the selected scanner, then exit. Same device selection as scanning (first device found, or use -s / --scanner).",
                      },
              ScanlineConfigOptionMono: @{
                      @"synonyms": @[@"bw"],
@@ -73,38 +196,43 @@ BOOL debugLogging = NO;
              ScanlineConfigOptionDir: @{
                      @"synonyms": @[@"folder"],
                      @"type": @"string",
-                     @"description": @"Specify a directory where the files should go.",
+                     @"metavar": @"DIR",
+                     @"description": @"Directory for output files.",
                      @"default": [NSString stringWithFormat:@"%@/Documents/Archive", NSHomeDirectory()]
                      },
              ScanlineConfigOptionName: @{
                      @"type": @"string",
-                     @"description": @"Specify a custom name for the output file."
+                     @"metavar": @"NAME",
+                     @"description": @"Custom base name for the output file."
                      },
              ScanlineConfigOptionVerbose: @{
                      @"synonyms": @[@"v"],
-                     @"description": @"Provide verbose logging."
+                     @"description": @"Verbose logging."
                      },
              ScanlineConfigOptionScanner: @{
                      @"synonyms": @[@"s"],
-                     @"description": @"Specify which scanner to use (use -list to list available scanners).",
-                     @"type": @"string"
+                     @"description": @"Scanner to use (see --list).",
+                     @"type": @"string",
+                     @"metavar": @"NAME"
                      },
              ScanlineConfigOptionResolution: @{
                      @"synonyms": @[@"res", @"minResolution"],
                      @"type": @"string",
-                     @"description": @"Specify minimum resolution at which to scan (in dpi)",
+                     @"metavar": @"DPI",
+                     @"description": @"Minimum scan resolution in dpi.",
                      @"default": @"150"
                      },
              ScanlineConfigOptionBrowseSecs: @{
                      @"synonyms": @[@"time", @"t"],
                      @"type": @"string",
-                     @"description": @"Specify how long to wait when searching for scanners (in seconds)",
+                     @"metavar": @"SECS",
+                     @"description": @"How long to search for scanners (seconds).",
                      @"default": @"10"
                      },
              ScanlineConfigOptionExactName: @{
                      @"synonyms": @[@"exact"],
                      @"type": @"flag",
-                     @"description": @"When specified, only the scanner with the exact name specified will be used (no fuzzy matching)"
+                     @"description": @"Use only a scanner whose name matches exactly (no fuzzy matching)."
                      },
              };
 }
@@ -144,36 +272,68 @@ BOOL debugLogging = NO;
         [self loadConfigurationDefaults];
         [self loadConfigurationFromFile:configFilePath];
         [self loadConfigurationFromArguments:inArguments];
+        [self canonicalizeOutputFormatStoredInConfiguration];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+#pragma clang diagnostic ignored "-Wundeclared-selector"
+        SEL skCanonPage = NSSelectorFromString(@"canonicalizePageSizeStoredConfiguration");
+        if ([self respondsToSelector:skCanonPage])
+            [(id)self performSelector:skCanonPage];
+#pragma clang diagnostic pop
     }
     return self;
 }
 
 - (void)help
 {
+    NSString *prog = [[[NSProcessInfo processInfo].arguments firstObject] lastPathComponent];
+    if (prog.length == 0)
+        prog = @"scanline";
+
     NSDictionary *configOptions = [ScanConfiguration configOptions];
+    NSString *defaultArchive = configOptions[ScanlineConfigOptionDir][@"default"];
 
-    SKLog(@"Usage: scanline [-option] [-option] [tag] [tag] [tag]...");
+    SKLog(@"Usage: %@ [OPTION]... [TAG]...", prog);
+    SKLog(@"Command-line scanner utility for macOS.");
     SKLog(@"");
+    SKLog(@"Options:");
+    NSUInteger col = 44;
+    NSString * (^spacingForFlags)(NSString *) = ^NSString *(NSString *flags) {
+        NSUInteger used = 2 + flags.length;
+        NSUInteger padCols = (used < col) ? (col - used) : 1;
+        return [@"" stringByPaddingToLength:padCols withString:@" " startingAtIndex:0];
+    };
 
-    for (NSString *key in configOptions.keyEnumerator) {
-        SKLog(@"-%@:", key);
-        SKLog(@"Purpose: %@", configOptions[key][@"description"]);
-        if (configOptions[key][@"default"] != nil) {
-            SKLog(@"Default: %@", configOptions[key][@"default"]);
+    NSArray *sortedKeys = [[configOptions allKeys] sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)];
+    for (NSString *key in sortedKeys) {
+        NSDictionary *detail = configOptions[key];
+
+        NSString *listKey = SKGNUOptionNamesWithMetavar(key, detail);
+        NSMutableString *rhs = [NSMutableString stringWithString:(NSString *)detail[@"description"]];
+        id def = detail[@"default"];
+        if (def != nil && def != [NSNull null]) {
+            NSString *defStr = [def description];
+            [rhs appendFormat:@" (default: %@)", defStr];
         }
-        SKLog(@"");
+
+        SKLog(@"  %@%@%@", listKey, spacingForFlags(listKey), rhs);
     }
 
+    NSString *helpKeys = @"-h, --help";
+    SKLog(@"  %@%@%@", helpKeys, spacingForFlags(helpKeys), @"Print this help message and exit.");
+
+    SKLog(@"");
+    SKLog(@"Arguments following a bare \"--\" are treated as tags even if they begin with \"-\".");
+    SKLog(@"Mandatory arguments to long options are mandatory for short options too.");
+    SKLog(@"");
+    SKLog(@"Configuration is read from %@ (one option per line); later command-line", [ScanConfiguration defaultConfigFilePath]);
+    SKLog(@"options override earlier defaults.");
     SKLog(@"");
     SKLog(@"Examples:");
-    SKLog(@"");
-    SKLog(@"scanline -duplex taxes");
-    SKLog(@"   ^-- Scan 2-sided and place in %@/taxes/", configOptions[ScanlineConfigOptionDir][@"default"]);
-    SKLog(@"scanline bills dental");
-    SKLog(@"   ^-- Scan and place in %@/bills/ with alias in %@/dental/",
-          configOptions[ScanlineConfigOptionDir][@"default"],
-          configOptions[ScanlineConfigOptionDir][@"default"]);
-
+    SKLog(@"  %@ --duplex taxes", prog);
+    SKLog(@"       Two-sided scan under %@/taxes/", defaultArchive);
+    SKLog(@"  %@ bills dental", prog);
+    SKLog(@"       Scan into %@/bills/ with a symlink in %@/dental/", defaultArchive, defaultArchive);
 }
 
 - (void)loadConfigurationDefaults
@@ -211,46 +371,168 @@ BOOL debugLogging = NO;
 
 - (void)loadConfigurationFromArguments:(NSArray*)inArguments
 {
-//    DDLogVerbose(@"loading config from arguments: %@", inArguments);
-    for (int i = 0; i < [inArguments count]; i++) {
-        NSString* theArg = [inArguments objectAtIndex:i];
+    BOOL optionsActive = YES;
 
-        if ([theArg isEqualToString:@"-help"] ||
-            [theArg isEqualToString:@"--help"]) {
-            [self help]; // haha self help!
-            exit(1);
-        } else if([theArg hasPrefix:@"-"]) {
-            NSString *canonicalKey = [ScanConfiguration canonicalConfigKeyFor:[theArg substringFromIndex:1]];
+    for (NSUInteger i = 0; i < inArguments.count; i++) {
+        NSString *theArg = inArguments[i];
 
-            if (canonicalKey == nil) {
-                SKLog(@"WARNING: Unknown option '%@' will be ignored", theArg);
-            } else {
-                NSDictionary *configDetails = [ScanConfiguration configOptions][canonicalKey];
-                if ([(NSString *)configDetails[@"type"] isEqualToString:@"string"]) {
-                    if (i+1 < [inArguments count]) {
-                        NSString *value = [inArguments objectAtIndex:++i];
-                        self.config[canonicalKey] = value;
+        if (SKArgIsHelp(theArg)) {
+            [self help];
+            exit(0);
+        }
+
+        if ([theArg isEqualToString:@"--"] && optionsActive) {
+            optionsActive = NO;
+            continue;
+        }
+
+        if ((![theArg hasPrefix:@"-"] || [theArg isEqualToString:@"-"]) || !optionsActive) {
+            if (theArg.length > 0)
+                [_tags addObject:theArg];
+            continue;
+        }
+
+        NSString *eqValue = nil;
+        NSString *bare = nil;
+
+        if ([theArg hasPrefix:@"--"]) {
+            NSString *body = SKStripOptionalEqualsValue([theArg substringFromIndex:2], &eqValue);
+            bare = body.length > 0 ? body : nil;
+        } else {
+            NSString *body = SKStripOptionalEqualsValue([theArg substringFromIndex:1], &eqValue);
+            bare = body.length > 0 ? body : nil;
+        }
+
+        /* Deprecated synonyms for --page-size SIZE (--document-type, --documenttype) */
+        if ([bare caseInsensitiveCompare:@"documenttype"] == NSOrderedSame ||
+            [bare caseInsensitiveCompare:@"document-type"] == NSOrderedSame) {
+            SKLog(@"scanline: `--document-type' is deprecated; use `--page-size' SIZE");
+            NSString *value = nil;
+            if (eqValue != nil)
+                value = eqValue;
+            if (value.length == 0 && eqValue == nil) {
+                if (i + 1 < inArguments.count) {
+                    NSString *nextTok = inArguments[i + 1];
+                    if (SKArgIsHelp(nextTok)) {
+                        [self help];
+                        exit(0);
+                    }
+                    if (SKLooksLikeKnownOption(optionsActive, nextTok)) {
+                        SKLog(@"scanline: option `%@' requires an argument", theArg);
                     } else {
-                        SKLog(@"WARNING: No value provided for option '%@'", theArg);
+                        value = nextTok;
+                        i++;
                     }
                 } else {
-                    self.config[canonicalKey] = @YES;
+                    SKLog(@"scanline: option `%@' requires an argument", theArg);
                 }
+            } else if (value.length == 0 && eqValue != nil) {
+                SKLog(@"scanline: option `%@' requires a non-empty argument", theArg);
             }
-        } else if (![theArg isEqualToString:@""]) {
-//            DDLogVerbose(@"Adding tag: %@", theArg);
-            [_tags addObject:theArg];
+            if (value.length > 0)
+                self.config[ScanlineConfigOptionPageSize] = value;
+            continue;
+        }
+
+        NSString *legacyPage = SKLegacyCanonicalPageFromBareOption(bare);
+        if (legacyPage != nil) {
+            if (eqValue.length > 0)
+                SKLog(@"scanline: option `%@' does not take an argument", theArg);
+            self.config[ScanlineConfigOptionPageSize] = legacyPage;
+            continue;
+        }
+
+        NSString *legacyCanonFormat = SKLegacyCanonicalFormatFromBareOption(bare);
+        if (legacyCanonFormat != nil) {
+            if (eqValue.length > 0) {
+                SKLog(@"scanline: option `%@' does not take an argument", theArg);
+            }
+            self.config[ScanlineConfigOptionFormat] = legacyCanonFormat;
+            continue;
+        }
+
+        NSString *canonicalKey = [ScanConfiguration canonicalConfigKeyFor:bare];
+        if (canonicalKey == nil) {
+            SKLog(@"scanline: unknown option `%@'", theArg);
+            continue;
+        }
+
+        NSDictionary *configDetails = [ScanConfiguration configOptions][canonicalKey];
+        if ([configDetails[@"type"] isEqualToString:@"string"]) {
+            NSString *value = nil;
+            if (eqValue != nil) {
+                value = eqValue;
+            }
+            if (value.length == 0 && eqValue == nil) {
+                if (i + 1 < inArguments.count) {
+                    NSString *nextTok = inArguments[i + 1];
+                    if (SKArgIsHelp(nextTok)) {
+                        [self help];
+                        exit(0);
+                    }
+                    if (SKLooksLikeKnownOption(optionsActive, nextTok)) {
+                        SKLog(@"scanline: option `%@' requires an argument", theArg);
+                    } else {
+                        value = nextTok;
+                        i++;
+                    }
+                } else {
+                    SKLog(@"scanline: option `%@' requires an argument", theArg);
+                }
+            } else if (value.length == 0 && eqValue != nil) {
+                SKLog(@"scanline: option `%@' requires a non-empty argument", theArg);
+            }
+            if (value.length > 0)
+                self.config[canonicalKey] = value;
+        } else {
+            if (eqValue.length > 0)
+                SKLog(@"scanline: option `%@' does not take an argument", theArg);
+            self.config[canonicalKey] = @YES;
         }
     }
-
-    if (self.config[ScanlineConfigOptionVerbose]) {
-//        ddLogLevel = DDLogLevelVerbose;
-//        DDLogVerbose(@"Verbose logging enabled.");
-    }
-
-    if ([self.config[ScanlineConfigOptionResolution] isEqualToString:@"0"]) {
-//        DDLogError(@"WARNING: Scanning at resolution of 0. This will scan at the scanner's lowest possible resolution.");
-    }
 }
+
+- (void)canonicalizeOutputFormatStoredInConfiguration
+{
+    id rawAny = self.config[ScanlineConfigOptionFormat];
+    NSString *canonical = @"pdf";
+
+    if ([rawAny isKindOfClass:[NSString class]]) {
+        NSString *trim = [(NSString *)rawAny stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if (trim.length > 0) {
+            NSString *lc = trim.lowercaseString;
+            if ([lc isEqualToString:@"jpg"]) {
+                canonical = @"jpeg";
+            } else if ([lc isEqualToString:@"tif"]) {
+                canonical = @"tiff";
+            } else if ([lc isEqualToString:@"pdf"] ||
+                       [lc isEqualToString:@"jpeg"] ||
+                       [lc isEqualToString:@"tiff"] ||
+                       [lc isEqualToString:@"png"]) {
+                canonical = lc;
+            } else {
+                SKLog(@"scanline: invalid --format `%@'; using pdf", trim);
+                canonical = @"pdf";
+            }
+        }
+    } else if (rawAny != nil) {
+        SKLog(@"scanline: invalid --format; using pdf");
+        canonical = @"pdf";
+    }
+
+    self.config[ScanlineConfigOptionFormat] = canonical;
+}
+
+- (NSString *)normalizedScanOutputFormat
+{
+    id raw = self.config[ScanlineConfigOptionFormat];
+    if (![raw isKindOfClass:[NSString class]]) {
+        return @"pdf";
+    }
+    NSString *s = (NSString *)raw;
+    return s.length > 0 ? s.lowercaseString : @"pdf";
+}
+
+#pragma clang diagnostic pop
 
 @end

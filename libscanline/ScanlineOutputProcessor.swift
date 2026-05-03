@@ -22,7 +22,9 @@ public class ScanlineOutputProcessor {
     }
     
     public func process() -> Bool {
-        let wantsPDF = configuration.config[ScanlineConfigOptionJPEG] == nil && configuration.config[ScanlineConfigOptionTIFF] == nil
+        let fmt = configuration.normalizedScanOutputFormat()
+        let wantsPDF = fmt == "pdf"
+
         if !wantsPDF {
             for url in urls {
                 outputAndTag(url: url)
@@ -77,11 +79,14 @@ public class ScanlineOutputProcessor {
         }
         
         let destinationFileExtension: String
-        if configuration.config[ScanlineConfigOptionTIFF] != nil {
+        switch configuration.normalizedScanOutputFormat() {
+        case "tiff":
             destinationFileExtension = "tif"
-        } else if configuration.config[ScanlineConfigOptionJPEG] != nil {
+        case "jpeg":
             destinationFileExtension = "jpg"
-        } else {
+        case "png":
+            destinationFileExtension = "png"
+        default:
             destinationFileExtension = "pdf"
         }
         

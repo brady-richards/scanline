@@ -181,9 +181,12 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
         scanner.downloadsDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
         scanner.documentName = "Scan"
         
-        if configuration.config[ScanlineConfigOptionTIFF] != nil {
+        switch configuration.normalizedScanOutputFormat() {
+        case "tiff":
             scanner.documentUTI = kUTTypeTIFF as String
-        } else {
+        case "png":
+            scanner.documentUTI = kUTTypePNG as String
+        default:
             scanner.documentUTI = kUTTypeJPEG as String
         }
     }
@@ -192,16 +195,13 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
         logger.verbose("Configuring Document Feeder")
 
         guard let functionalUnit = scanner.selectedFunctionalUnit as? ICScannerFunctionalUnitDocumentFeeder else { return }
-        
-        functionalUnit.documentType = { () -> ICScannerDocumentType in
-            if configuration.config[ScanlineConfigOptionLegal] != nil {
-                return .typeUSLegal
-            }
-            if configuration.config[ScanlineConfigOptionA4] != nil {
-                return .typeA4
-            }
-            return .typeUSLetter
-        }()
+
+        let pageKey = configuration.normalizedPageSizeCatalogKey()
+        guard let spec = documentTypes[pageKey] else {
+            logger.log("ERROR: invalid page-size key \(pageKey)")
+            exit(-1)
+        }
+        functionalUnit.documentType = spec.documentType
         
         functionalUnit.duplexScanningEnabled = (configuration.config[ScanlineConfigOptionDuplex] != nil)
     }
