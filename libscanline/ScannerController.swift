@@ -8,6 +8,7 @@
 
 import Foundation
 import ImageCaptureCore
+import Quartz
 
 public protocol ScannerControllerDelegate: AnyObject {
     func scannerControllerDidFail(_ scannerController: ScannerController)

@@ -60,7 +60,9 @@ public class ScannerBrowser: NSObject, ICDeviceBrowserDelegate {
     
     private func deviceMatchesSpecified(device: ICScannerDevice) -> Bool {
         // If no name was specified, this is perforce an exact match
-        guard let desiredName = configuration.config[ScanlineConfigOptionScanner] as? String else { return configuration.config[ScanlineConfigOptionList] == nil }
+        guard let desiredName = configuration.config[ScanlineConfigOptionScanner] as? String else {
+            return configuration.config[ScanlineConfigOptionList] == nil
+        }
         guard let deviceName = device.name else { return false }
         
         // "Fuzzy" match -- case-free compare of prefix

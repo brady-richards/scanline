@@ -12,6 +12,10 @@
 		FC4184AB26CDDFD500308408 /* ScannerBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF90C4F1FD39E3300EAF3D1 /* ScannerBrowser.swift */; };
 		FC4184AC26CDDFD800308408 /* ScannerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC4DE2AE264E1FB000E2A900 /* ScannerController.swift */; };
 		FC4184AD26CDDFDB00308408 /* ScanlineOutputProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC4DE2B0264E1FEC00E2A900 /* ScanlineOutputProcessor.swift */; };
+		FC4DE2332648496400E2A901 /* ScannerDocumentTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC4DE2332648496400E2A900 /* ScannerDocumentTypes.swift */; };
+		FC4DE2352648496400E2A902 /* ScannerDocumentTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC4DE2332648496400E2A900 /* ScannerDocumentTypes.swift */; };
+		FCB1PAGE2648496400E2A901 /* PageSizeSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCB1PAGE2648496400E2A900 /* PageSizeSupport.swift */; };
+		FCB1PAGE2648496400E2A902 /* PageSizeSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCB1PAGE2648496400E2A900 /* PageSizeSupport.swift */; };
 		FC4184AE26CDE7FD00308408 /* config_test.conf in Resources */ = {isa = PBXBuildFile; fileRef = FCD75D441FF2E9300041D955 /* config_test.conf */; };
 		FC4DE2222648287D00E2A900 /* ConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC4DE2212648287D00E2A900 /* ConfigurationTests.swift */; };
 		FC4DE2242648287D00E2A900 /* libscanline.h in Headers */ = {isa = PBXBuildFile; fileRef = FC4DE2162648287D00E2A900 /* libscanline.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -76,6 +80,8 @@
 		FC4DE2212648287D00E2A900 /* ConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationTests.swift; sourceTree = "<group>"; };
 		FC4DE2232648287D00E2A900 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		FC4DE2AE264E1FB000E2A900 /* ScannerController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerController.swift; sourceTree = "<group>"; };
+		FC4DE2332648496400E2A900 /* ScannerDocumentTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerDocumentTypes.swift; sourceTree = "<group>"; };
+		FCB1PAGE2648496400E2A900 /* PageSizeSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageSizeSupport.swift; sourceTree = "<group>"; };
 		FC4DE2B0264E1FEC00E2A900 /* ScanlineOutputProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanlineOutputProcessor.swift; sourceTree = "<group>"; };
 		FCD75D441FF2E9300041D955 /* config_test.conf */ = {isa = PBXFileReference; lastKnownFileType = text; path = config_test.conf; sourceTree = "<group>"; };
 		FCF90C3B1FD3534B00EAF3D1 /* scanline */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = scanline; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -124,6 +130,8 @@
 				FC4DE2162648287D00E2A900 /* libscanline.h */,
 				FC4DE2172648287D00E2A900 /* Info.plist */,
 				FC4DE2AE264E1FB000E2A900 /* ScannerController.swift */,
+				FC4DE2332648496400E2A900 /* ScannerDocumentTypes.swift */,
+				FCB1PAGE2648496400E2A900 /* PageSizeSupport.swift */,
 				FC4DE2B0264E1FEC00E2A900 /* ScanlineOutputProcessor.swift */,
 			);
 			path = libscanline;
@@ -311,6 +319,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FC4DE2332648496400E2A901 /* ScannerDocumentTypes.swift in Sources */,
+				FCB1PAGE2648496400E2A901 /* PageSizeSupport.swift in Sources */,
 				FC4DE2AF264E1FB000E2A900 /* ScannerController.swift in Sources */,
 				FC4DE22D264848B600E2A900 /* ScannerBrowser.swift in Sources */,
 				FC4DE22E264848B600E2A900 /* Logger.swift in Sources */,
@@ -333,6 +343,8 @@
 			files = (
 				FCF90C3F1FD3534B00EAF3D1 /* main.swift in Sources */,
 				FCF90C4A1FD3537400EAF3D1 /* ScanlineAppController.swift in Sources */,
+				FC4DE2352648496400E2A902 /* ScannerDocumentTypes.swift in Sources */,
+				FCB1PAGE2648496400E2A902 /* PageSizeSupport.swift in Sources */,
 				FC4184AC26CDDFD800308408 /* ScannerController.swift in Sources */,
 				FC4184AB26CDDFD500308408 /* ScannerBrowser.swift in Sources */,
 				FC4184A926CDDFD000308408 /* ScanConfiguration.m in Sources */,
