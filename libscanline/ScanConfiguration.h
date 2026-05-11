@@ -46,6 +46,9 @@ static NSString * const ScanlineConfigOptionExactName = @"exactname";
 /** Canonical page-size key (e.g. usletter, a4); see --page-size help. */
 - (NSString *)normalizedPageSizeCatalogKey;
 
+/** True if page size was set from ~/.scanline.conf or the command line (not only the built-in default). */
+@property (nonatomic, readonly) BOOL pageSizeUserConfigured;
+
 @end
 
 extern BOOL verboseLogging;

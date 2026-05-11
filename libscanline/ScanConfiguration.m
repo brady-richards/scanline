@@ -143,6 +143,7 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
 }
 
 @interface ScanConfiguration()
+@property (nonatomic, readwrite) BOOL pageSizeUserConfigured;
 @end
 
 #pragma clang diagnostic push
@@ -429,8 +430,10 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
             } else if (value.length == 0 && eqValue != nil) {
                 SKLog(@"scanline: option `%@' requires a non-empty argument", theArg);
             }
-            if (value.length > 0)
+            if (value.length > 0) {
                 self.config[ScanlineConfigOptionPageSize] = value;
+                self.pageSizeUserConfigured = YES;
+            }
             continue;
         }
 
@@ -439,6 +442,7 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
             if (eqValue.length > 0)
                 SKLog(@"scanline: option `%@' does not take an argument", theArg);
             self.config[ScanlineConfigOptionPageSize] = legacyPage;
+            self.pageSizeUserConfigured = YES;
             continue;
         }
 
@@ -482,8 +486,12 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
             } else if (value.length == 0 && eqValue != nil) {
                 SKLog(@"scanline: option `%@' requires a non-empty argument", theArg);
             }
-            if (value.length > 0)
+            if (value.length > 0) {
                 self.config[canonicalKey] = value;
+                if ([canonicalKey isEqualToString:ScanlineConfigOptionPageSize]) {
+                    self.pageSizeUserConfigured = YES;
+                }
+            }
         } else {
             if (eqValue.length > 0)
                 SKLog(@"scanline: option `%@' does not take an argument", theArg);
