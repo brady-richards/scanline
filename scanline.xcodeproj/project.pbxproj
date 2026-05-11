@@ -17,6 +17,7 @@
 		FCB1PAGE2648496400E2A901 /* PageSizeSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCB1PAGE2648496400E2A900 /* PageSizeSupport.swift */; };
 		FCB1PAGE2648496400E2A902 /* PageSizeSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCB1PAGE2648496400E2A900 /* PageSizeSupport.swift */; };
 		FC4184AE26CDE7FD00308408 /* config_test.conf in Resources */ = {isa = PBXBuildFile; fileRef = FCD75D441FF2E9300041D955 /* config_test.conf */; };
+		FCPAGE2628482700E2A901 /* config_pagesize.conf in Resources */ = {isa = PBXBuildFile; fileRef = FCPAGE2628482700E2A900 /* config_pagesize.conf */; };
 		FC4DE2222648287D00E2A900 /* ConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC4DE2212648287D00E2A900 /* ConfigurationTests.swift */; };
 		FC4DE2242648287D00E2A900 /* libscanline.h in Headers */ = {isa = PBXBuildFile; fileRef = FC4DE2162648287D00E2A900 /* libscanline.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		FC4DE22D264848B600E2A900 /* ScannerBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF90C4F1FD39E3300EAF3D1 /* ScannerBrowser.swift */; };
@@ -84,6 +85,7 @@
 		FCB1PAGE2648496400E2A900 /* PageSizeSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageSizeSupport.swift; sourceTree = "<group>"; };
 		FC4DE2B0264E1FEC00E2A900 /* ScanlineOutputProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanlineOutputProcessor.swift; sourceTree = "<group>"; };
 		FCD75D441FF2E9300041D955 /* config_test.conf */ = {isa = PBXFileReference; lastKnownFileType = text; path = config_test.conf; sourceTree = "<group>"; };
+		FCPAGE2628482700E2A900 /* config_pagesize.conf */ = {isa = PBXFileReference; lastKnownFileType = text; path = config_pagesize.conf; sourceTree = "<group>"; };
 		FCF90C3B1FD3534B00EAF3D1 /* scanline */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = scanline; sourceTree = BUILT_PRODUCTS_DIR; };
 		FCF90C3E1FD3534B00EAF3D1 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		FCF90C451FD3536700EAF3D1 /* scanline-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "scanline-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -142,6 +144,7 @@
 			children = (
 				FC4DE2212648287D00E2A900 /* ConfigurationTests.swift */,
 				FCD75D441FF2E9300041D955 /* config_test.conf */,
+				FCPAGE2628482700E2A900 /* config_pagesize.conf */,
 				FC4DE2232648287D00E2A900 /* Info.plist */,
 			);
 			path = libscanlineTests;
@@ -309,6 +312,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FC4184AE26CDE7FD00308408 /* config_test.conf in Resources */,
+				FCPAGE2628482700E2A901 /* config_pagesize.conf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

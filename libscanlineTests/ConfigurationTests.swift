@@ -11,6 +11,7 @@ import XCTest
 
 class ConfigurationTests: XCTestCase {
     private lazy var testConfigPath = Bundle(for: ConfigurationTests.self).path(forResource: "config_test", ofType: "conf") ?? ""
+    private lazy var testConfigPageSizePath = Bundle(for: ConfigurationTests.self).path(forResource: "config_pagesize", ofType: "conf") ?? ""
         
     func testLoadConfigurationFromFile() {
         let testConfig = ScanConfiguration(arguments: [], configFilePath: testConfigPath)
@@ -110,6 +111,24 @@ class ConfigurationTests: XCTestCase {
     func testDocumentTypeDeprecatedSynonym() {
         let testConfig = ScanConfiguration(arguments: ["--document-type", "uslegal"])
         XCTAssertEqual(testConfig.normalizedPageSizeCatalogKey(), "uslegal")
+        XCTAssertTrue(testConfig.pageSizeUserConfigured)
+    }
+
+    func testPageSizeUserConfiguredFalseWhenOnlyBuiltinDefault() {
+        let testConfig = ScanConfiguration(arguments: [], configFilePath: testConfigPath)
+        XCTAssertEqual(testConfig.normalizedPageSizeCatalogKey(), "usletter")
+        XCTAssertFalse(testConfig.pageSizeUserConfigured)
+    }
+
+    func testPageSizeUserConfiguredTrueFromCli() {
+        let testConfig = ScanConfiguration(arguments: ["--page-size=a4"], configFilePath: testConfigPath)
+        XCTAssertTrue(testConfig.pageSizeUserConfigured)
+    }
+
+    func testPageSizeUserConfiguredTrueFromConfigFile() {
+        let testConfig = ScanConfiguration(arguments: [], configFilePath: testConfigPageSizePath)
+        XCTAssertEqual(testConfig.normalizedPageSizeCatalogKey(), "a4")
+        XCTAssertTrue(testConfig.pageSizeUserConfigured)
     }
     
     func testMissingSecondParameter() {

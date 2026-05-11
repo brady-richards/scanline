@@ -213,6 +213,28 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
 
         functionalUnit.measurementUnit = .inches
         let physicalSize = functionalUnit.physicalSize
-        functionalUnit.scanArea = NSMakeRect(0, 0, physicalSize.width, physicalSize.height)
+        functionalUnit.scanArea = NSRect(x: 0, y: 0, width: physicalSize.width, height: physicalSize.height)
+
+        if configuration.pageSizeUserConfigured {
+            let pageKey = configuration.normalizedPageSizeCatalogKey()
+            guard let spec = documentTypes[pageKey] else {
+                logger.log("ERROR: invalid page-size key \(pageKey)")
+                exit(-1)
+            }
+            functionalUnit.documentType = spec.documentType
+        } else {
+            let defaultRaw = Int(ICScannerDocumentType.typeDefault.rawValue)
+            if functionalUnit.supportedDocumentTypes.contains(defaultRaw) {
+                functionalUnit.documentType = .typeDefault
+            } else {
+                let keys = PageSizeCatalog.supportedCatalogKeys(for: functionalUnit)
+                if let largestKey = keys.last, let spec = documentTypes[largestKey] {
+                    functionalUnit.documentType = spec.documentType
+                    logger.verbose("Flatbed: no Default document type; using largest reported preset `\(largestKey)'")
+                } else {
+                    logger.verbose("Flatbed: no page presets from driver; document type unchanged")
+                }
+            }
+        }
     }
 }
