@@ -49,6 +49,9 @@ static NSString * const ScanlineConfigOptionExactName = @"exactname";
 /** True if page size was set from ~/.scanline.conf or the command line (not only the built-in default). */
 @property (nonatomic, readonly) BOOL pageSizeUserConfigured;
 
+/** True if output format was set from ~/.scanline.conf or the command line (not only the built-in default). */
+@property (nonatomic, readonly) BOOL formatUserConfigured;
+
 @end
 
 extern BOOL verboseLogging;

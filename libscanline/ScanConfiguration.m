@@ -226,6 +226,7 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
 
 @interface ScanConfiguration()
 @property (nonatomic, readwrite) BOOL pageSizeUserConfigured;
+@property (nonatomic, readwrite) BOOL formatUserConfigured;
 @end
 
 #pragma clang diagnostic push
@@ -256,8 +257,7 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
              ScanlineConfigOptionFormat: @{
                      @"type": @"string",
                      @"metavar": @"FMT",
-                     @"default": @"pdf",
-                     @"description": @"Output format: pdf, jpeg (or jpg), tiff (or tif), or png.",
+                     @"description": @"Output format: pdf, jpeg (or jpg), tiff (or tif), or png. Default is png for flatbed (--flatbed) and pdf for document feeder.",
                      },
              ScanlineConfigOptionPageSize: @{
                      @"type": @"string",
@@ -535,6 +535,7 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
                 SKLog(@"scanline: option `%@' does not take an argument", theArg);
             }
             self.config[ScanlineConfigOptionFormat] = legacyCanonFormat;
+            self.formatUserConfigured = YES;
             continue;
         }
 
@@ -574,6 +575,9 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
                 if ([canonicalKey isEqualToString:ScanlineConfigOptionPageSize]) {
                     self.pageSizeUserConfigured = YES;
                 }
+                if ([canonicalKey isEqualToString:ScanlineConfigOptionFormat]) {
+                    self.formatUserConfigured = YES;
+                }
             }
         } else {
             if (eqValue.length > 0)
@@ -583,10 +587,20 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
     }
 }
 
+- (NSString *)defaultScanOutputFormat
+{
+    return (self.config[ScanlineConfigOptionFlatbed] != nil) ? @"png" : @"pdf";
+}
+
 - (void)canonicalizeOutputFormatStoredInConfiguration
 {
+    if (!self.formatUserConfigured) {
+        [self.config removeObjectForKey:ScanlineConfigOptionFormat];
+        return;
+    }
+
     id rawAny = self.config[ScanlineConfigOptionFormat];
-    NSString *canonical = @"pdf";
+    NSString *canonical = [self defaultScanOutputFormat];
 
     if ([rawAny isKindOfClass:[NSString class]]) {
         NSString *trim = [(NSString *)rawAny stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
@@ -602,13 +616,11 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
                        [lc isEqualToString:@"png"]) {
                 canonical = lc;
             } else {
-                SKLog(@"scanline: invalid --format `%@'; using pdf", trim);
-                canonical = @"pdf";
+                SKLog(@"scanline: invalid --format `%@'; using %@", trim, canonical);
             }
         }
     } else if (rawAny != nil) {
-        SKLog(@"scanline: invalid --format; using pdf");
-        canonical = @"pdf";
+        SKLog(@"scanline: invalid --format; using %@", canonical);
     }
 
     self.config[ScanlineConfigOptionFormat] = canonical;
@@ -616,12 +628,16 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
 
 - (NSString *)normalizedScanOutputFormat
 {
+    if (!self.formatUserConfigured) {
+        return [self defaultScanOutputFormat];
+    }
+
     id raw = self.config[ScanlineConfigOptionFormat];
     if (![raw isKindOfClass:[NSString class]]) {
-        return @"pdf";
+        return [self defaultScanOutputFormat];
     }
     NSString *s = (NSString *)raw;
-    return s.length > 0 ? s.lowercaseString : @"pdf";
+    return s.length > 0 ? s.lowercaseString : [self defaultScanOutputFormat];
 }
 
 #pragma clang diagnostic pop

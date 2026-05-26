@@ -47,9 +47,14 @@ class ConfigurationTests: XCTestCase {
         XCTAssertEqual(testConfig.config[ScanlineConfigOptionResolution] as? String ?? "", "450")
     }
 
-    func testDefaultFormatIsPdf() {
+    func testDefaultFormatIsPdfForFeeder() {
         let testConfig = ScanConfiguration(arguments: [])
         XCTAssertEqual(testConfig.normalizedScanOutputFormat(), "pdf")
+    }
+
+    func testDefaultFormatIsPngForFlatbed() {
+        let testConfig = ScanConfiguration(arguments: ["--flatbed"])
+        XCTAssertEqual(testConfig.normalizedScanOutputFormat(), "png")
     }
 
     func testFormatEqualsSyntax() {
@@ -62,9 +67,14 @@ class ConfigurationTests: XCTestCase {
         XCTAssertEqual(testConfig.normalizedScanOutputFormat(), "jpeg")
     }
 
-    func testInvalidFormatFallsBackToPdf() {
+    func testInvalidFormatFallsBackToFeederDefault() {
         let testConfig = ScanConfiguration(arguments: ["--format=wav"])
         XCTAssertEqual(testConfig.normalizedScanOutputFormat(), "pdf")
+    }
+
+    func testInvalidFormatFallsBackToFlatbedDefault() {
+        let testConfig = ScanConfiguration(arguments: ["--flatbed", "--format=wav"])
+        XCTAssertEqual(testConfig.normalizedScanOutputFormat(), "png")
     }
 
     func testJpegOption() {
