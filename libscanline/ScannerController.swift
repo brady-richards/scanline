@@ -10,6 +10,14 @@ import Foundation
 import ImageCaptureCore
 import Quartz
 
+private protocol DocumentTypeConfigurable: ICScannerFunctionalUnit {
+    var supportedDocumentTypes: IndexSet { get }
+    var documentType: ICScannerDocumentType { get set }
+}
+
+extension ICScannerFunctionalUnitDocumentFeeder: DocumentTypeConfigurable {}
+extension ICScannerFunctionalUnitFlatbed: DocumentTypeConfigurable {}
+
 public protocol ScannerControllerDelegate: AnyObject {
     func scannerControllerDidFail(_ scannerController: ScannerController)
     func scannerControllerDidSucceed(_ scannerController: ScannerController)
@@ -21,6 +29,7 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
     let configuration: ScanConfiguration
     let logger: Logger
     var scannedURLs = [URL]()
+    public private(set) var failureReason: String?
     public weak var delegate: ScannerControllerDelegate?
     var desiredFunctionalUnitType: ICScannerFunctionalUnitType {
         return (configuration.config[ScanlineConfigOptionFlatbed] == nil) ?
@@ -56,20 +65,19 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
 
     public func device(_ device: ICDevice, didEncounterError error: Error?) {
         logger.verbose("didEncounterError: \(error?.localizedDescription ?? "[no error]")")
-        delegate?.scannerControllerDidFail(self)
+        reportFailure(error: error, fallback: "Scanner error")
     }
     
     public func device(_ device: ICDevice, didCloseSessionWithError error: Error?) {
         logger.verbose("didCloseSessionWithError: \(error?.localizedDescription ?? "[no error]")")
-        delegate?.scannerControllerDidFail(self)
+        reportFailure(error: error, fallback: "Scanner session closed")
     }
     
     public func device(_ device: ICDevice, didOpenSessionWithError error: Error?) {
         logger.verbose("didOpenSessionWithError: \(error?.localizedDescription ?? "[no error]")")
         
         guard error == nil else {
-            logger.log("Error received while attempting to open a session with the scanner.")
-            delegate?.scannerControllerDidFail(self)
+            reportFailure(error: error, fallback: "Error opening scanner session")
             return
         }
     }
@@ -114,8 +122,7 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
         logger.verbose("didCompleteScanWithError \(error?.localizedDescription ?? "[no error]")")
         
         guard error == nil else {
-            logger.log("ERROR: \(error!.localizedDescription)")
-            delegate?.scannerControllerDidFail(self)
+            reportFailure(error: error, fallback: "Scan failed")
             return
         }
 
@@ -133,11 +140,21 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
         if outputProcessor.process() {
             delegate?.scannerControllerDidSucceed(self)
         } else {
-            delegate?.scannerControllerDidFail(self)
+            reportFailure("Error while creating PDF")
         }
     }
     
     // MARK: Private Methods
+
+    private func reportFailure(_ reason: String) {
+        failureReason = reason
+        delegate?.scannerControllerDidFail(self)
+    }
+
+    private func reportFailure(error: Error?, fallback: String) {
+        let trimmed = error?.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        reportFailure(trimmed.isEmpty ? fallback : trimmed)
+    }
     
     enum PendingAction {
         case none, obtainResolutions, scan
@@ -196,13 +213,7 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
 
         guard let functionalUnit = scanner.selectedFunctionalUnit as? ICScannerFunctionalUnitDocumentFeeder else { return }
 
-        let pageKey = configuration.normalizedPageSizeCatalogKey()
-        guard let spec = documentTypes[pageKey] else {
-            logger.log("ERROR: invalid page-size key \(pageKey)")
-            exit(-1)
-        }
-        functionalUnit.documentType = spec.documentType
-        
+        applyDocumentType(for: functionalUnit, unitLabel: "Document feeder")
         functionalUnit.duplexScanningEnabled = (configuration.config[ScanlineConfigOptionDuplex] != nil)
     }
     
@@ -215,6 +226,10 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
         let physicalSize = functionalUnit.physicalSize
         functionalUnit.scanArea = NSRect(x: 0, y: 0, width: physicalSize.width, height: physicalSize.height)
 
+        applyDocumentType(for: functionalUnit, unitLabel: "Flatbed")
+    }
+
+    fileprivate func applyDocumentType<T: DocumentTypeConfigurable>(for functionalUnit: T, unitLabel: String) {
         if configuration.pageSizeUserConfigured {
             let pageKey = configuration.normalizedPageSizeCatalogKey()
             guard let spec = documentTypes[pageKey] else {
@@ -222,19 +237,22 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
                 exit(-1)
             }
             functionalUnit.documentType = spec.documentType
+            return
+        }
+
+        let defaultRaw = Int(ICScannerDocumentType.typeDefault.rawValue)
+        if functionalUnit.supportedDocumentTypes.contains(defaultRaw) {
+            functionalUnit.documentType = .typeDefault
+            logger.verbose("\(unitLabel): using Default (auto) document type")
+            return
+        }
+
+        let keys = PageSizeCatalog.supportedCatalogKeys(for: functionalUnit)
+        if let largestKey = keys.last, let spec = documentTypes[largestKey] {
+            functionalUnit.documentType = spec.documentType
+            logger.verbose("\(unitLabel): no Default document type; using largest reported preset `\(largestKey)'")
         } else {
-            let defaultRaw = Int(ICScannerDocumentType.typeDefault.rawValue)
-            if functionalUnit.supportedDocumentTypes.contains(defaultRaw) {
-                functionalUnit.documentType = .typeDefault
-            } else {
-                let keys = PageSizeCatalog.supportedCatalogKeys(for: functionalUnit)
-                if let largestKey = keys.last, let spec = documentTypes[largestKey] {
-                    functionalUnit.documentType = spec.documentType
-                    logger.verbose("Flatbed: no Default document type; using largest reported preset `\(largestKey)'")
-                } else {
-                    logger.verbose("Flatbed: no page presets from driver; document type unchanged")
-                }
-            }
+            logger.verbose("\(unitLabel): no page presets from driver; document type unchanged")
         }
     }
 }

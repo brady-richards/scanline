@@ -121,7 +121,11 @@ extension ScanlineAppController: ScannerControllerDelegate {
     }
 
     func scannerControllerDidFail(_ scannerController: ScannerController) {
-        logger.log("Failed to scan document.")
+        if let reason = scannerController.failureReason, !reason.isEmpty {
+            logger.log("Failed to scan document: \(reason)")
+        } else {
+            logger.log("Failed to scan document.")
+        }
         exit()
     }
     

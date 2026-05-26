@@ -34,7 +34,6 @@ public class ScanlineOutputProcessor {
             if let combinedURL = combine(urls: urls) {
                 outputAndTag(url: combinedURL)
             } else {
-                logger.log("Error while creating PDF")
                 return false
             }
         }
@@ -152,6 +151,8 @@ public class ScanlineOutputProcessor {
             logger.verbose("Opening file at \(destinationFilePath)")
             NSWorkspace.shared.openFile(destinationFilePath)
         }
+
+        logger.log("Scan saved: \(destinationURL.lastPathComponent)")
     }
 }
 

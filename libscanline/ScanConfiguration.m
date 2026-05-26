@@ -263,7 +263,7 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
                      @"type": @"string",
                      @"metavar": @"SIZE",
                      @"default": @"usletter",
-                     @"description": @"Page/document size preset (catalog key from --list-page-sizes).",
+                     @"description": @"Page/document size preset (catalog key from --list-page-sizes). When omitted, the feeder uses auto-detect if available, otherwise the largest preset; the flatbed uses the full scan area.",
                      },
              ScanlineConfigOptionListPageSizes: @{
                      @"type": @"flag",
