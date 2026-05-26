@@ -112,6 +112,88 @@ static BOOL SKLooksLikeKnownOption(BOOL optionsActive, NSString *__nonnull token
     return [ScanConfiguration canonicalConfigKeyFor:bare] != nil;
 }
 
+/** Shell-like word splitting for SCANLINE_DEFAULTS (supports '...' and "..."). */
+static NSArray<NSString *> *SKTokenizeShellWords(NSString *__nonnull line)
+{
+    NSMutableArray<NSString *> *result = [NSMutableArray array];
+    NSMutableString *current = [NSMutableString string];
+    unichar quote = 0;
+    BOOL escape = NO;
+    NSUInteger len = line.length;
+
+    for (NSUInteger i = 0; i < len; i++) {
+        unichar c = [line characterAtIndex:i];
+
+        if (escape) {
+            [current appendFormat:@"%C", c];
+            escape = NO;
+            continue;
+        }
+
+        if (quote == 0 && c == '\\') {
+            escape = YES;
+            continue;
+        }
+
+        if (quote != 0) {
+            if (quote == '"' && c == '\\' && i + 1 < len) {
+                unichar next = [line characterAtIndex:i + 1];
+                if (next == '"' || next == '\\') {
+                    [current appendFormat:@"%C", next];
+                    i++;
+                    continue;
+                }
+            }
+            if (c == quote) {
+                quote = 0;
+            } else {
+                [current appendFormat:@"%C", c];
+            }
+            continue;
+        }
+
+        if (c == '\'' || c == '"') {
+            quote = c;
+            continue;
+        }
+
+        if ([[NSCharacterSet whitespaceAndNewlineCharacterSet] characterIsMember:c]) {
+            if (current.length > 0) {
+                [result addObject:[current copy]];
+                [current setString:@""];
+            }
+            continue;
+        }
+
+        [current appendFormat:@"%C", c];
+    }
+
+    if (escape)
+        [current appendString:@"\\"];
+    if (current.length > 0)
+        [result addObject:[current copy]];
+
+    return result;
+}
+
+static NSArray<NSString *> *SKArgumentsFromEnvironmentDefaults(void)
+{
+    NSString *raw = [[[NSProcessInfo processInfo] environment] objectForKey:@"SCANLINE_DEFAULTS"];
+    if (raw.length == 0)
+        return @[];
+    return SKTokenizeShellWords(raw);
+}
+
+static NSArray<NSString *> *SKMergedArgumentsWithEnvironmentDefaults(NSArray<NSString *> *cliArguments)
+{
+    NSArray<NSString *> *envArgs = SKArgumentsFromEnvironmentDefaults();
+    if (envArgs.count == 0)
+        return cliArguments;
+    if (cliArguments.count == 0)
+        return envArgs;
+    return [envArgs arrayByAddingObjectsFromArray:cliArguments];
+}
+
 static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, NSDictionary *__nonnull details)
 {
     NSArray *synonyms = details[@"synonyms"];
@@ -272,7 +354,7 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
 
         [self loadConfigurationDefaults];
         [self loadConfigurationFromFile:configFilePath];
-        [self loadConfigurationFromArguments:inArguments];
+        [self loadConfigurationFromArguments:SKMergedArgumentsWithEnvironmentDefaults(inArguments)];
         [self canonicalizeOutputFormatStoredInConfiguration];
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
@@ -327,7 +409,8 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
     SKLog(@"Arguments following a bare \"--\" are treated as tags even if they begin with \"-\".");
     SKLog(@"Mandatory arguments to long options are mandatory for short options too.");
     SKLog(@"");
-    SKLog(@"Configuration is read from %@ (one option per line); later command-line", [ScanConfiguration defaultConfigFilePath]);
+    SKLog(@"Configuration is read from %@ (one option per line); SCANLINE_DEFAULTS", [ScanConfiguration defaultConfigFilePath]);
+    SKLog(@"is tokenized like shell words and applied before command-line options; later");
     SKLog(@"options override earlier defaults.");
     SKLog(@"");
     SKLog(@"Examples:");

@@ -138,4 +138,36 @@ class ConfigurationTests: XCTestCase {
         let testConfig = ScanConfiguration(arguments: ["-scanner", "epson"])
         XCTAssertEqual(testConfig.config[ScanlineConfigOptionScanner] as? String ?? "", "epson")
     }
+
+    func testEnvironmentDefaultsApplyOptions() {
+        setenv("SCANLINE_DEFAULTS", "-duplex", 1)
+        defer { unsetenv("SCANLINE_DEFAULTS") }
+
+        let testConfig = ScanConfiguration(arguments: [])
+        XCTAssertTrue(testConfig.config[ScanlineConfigOptionDuplex] as? Bool == true)
+    }
+
+    func testEnvironmentDefaultsOverriddenByCommandLine() {
+        setenv("SCANLINE_DEFAULTS", "--resolution=300", 1)
+        defer { unsetenv("SCANLINE_DEFAULTS") }
+
+        let testConfig = ScanConfiguration(arguments: ["--resolution=600"])
+        XCTAssertEqual(testConfig.config[ScanlineConfigOptionResolution] as? String ?? "", "600")
+    }
+
+    func testEnvironmentDefaultsApplyTagsBeforeCommandLineTags() {
+        setenv("SCANLINE_DEFAULTS", "bills", 1)
+        defer { unsetenv("SCANLINE_DEFAULTS") }
+
+        let testConfig = ScanConfiguration(arguments: ["dental"])
+        XCTAssertEqual(testConfig.tags as? [String], ["bills", "dental"])
+    }
+
+    func testEnvironmentDefaultsQuotedScannerName() {
+        setenv("SCANLINE_DEFAULTS", "-scanner 'Virtual Scanner EX/AF'", 1)
+        defer { unsetenv("SCANLINE_DEFAULTS") }
+
+        let testConfig = ScanConfiguration(arguments: [])
+        XCTAssertEqual(testConfig.config[ScanlineConfigOptionScanner] as? String ?? "", "Virtual Scanner EX/AF")
+    }
 }
