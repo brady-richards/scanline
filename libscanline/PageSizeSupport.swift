@@ -191,6 +191,20 @@ enum PageSizeCatalog {
             .map(\.key)
             .sorted(by: compareCatalogKeysIncreasingArea)
         }
+        if let transparency = functionalUnit as? ICScannerFunctionalUnitPositiveTransparency {
+            return documentTypes.filter {
+                transparency.supportedDocumentTypes.contains(Int($0.value.documentType.rawValue))
+            }
+            .map(\.key)
+            .sorted(by: compareCatalogKeysIncreasingArea)
+        }
+        if let transparency = functionalUnit as? ICScannerFunctionalUnitNegativeTransparency {
+            return documentTypes.filter {
+                transparency.supportedDocumentTypes.contains(Int($0.value.documentType.rawValue))
+            }
+            .map(\.key)
+            .sorted(by: compareCatalogKeysIncreasingArea)
+        }
         return []
     }
 }

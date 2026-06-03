@@ -94,6 +94,25 @@ extension ScanlineAppController: ScannerBrowserDelegate {
             return
         }
 
+        if configuration.config[ScanlineConfigOptionQuery] != nil {
+            guard let scanner = scanner else {
+                logger.log("No scanner was found.")
+                exit()
+                return
+            }
+            let lines = ScannerCapabilitiesReporter.capabilityLinesFromScannerSync(scanner: scanner)
+            if lines.isEmpty {
+                let deviceLabel = scanner.name ?? "selected scanner"
+                logger.log("scanline: could not query capabilities for `\(deviceLabel)'.")
+            } else {
+                for line in lines {
+                    logger.log(line)
+                }
+            }
+            exit()
+            return
+        }
+
         guard let scanner = scanner else {
             logger.log("No scanner was found.")
             exit()
