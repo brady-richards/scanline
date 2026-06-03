@@ -113,6 +113,8 @@ public class ScanlineOutputProcessor {
             return
         }
 
+        logger.log(destinationFilePath)
+
         // Alias to all other tag locations
         // todo: this is super repetitive with above...
         if configuration.tags.count > 1 {
@@ -147,12 +149,53 @@ public class ScanlineOutputProcessor {
             }
         }
         
-        if configuration.config[ScanlineConfigOptionOpen] != nil {
-            logger.verbose("Opening file at \(destinationFilePath)")
-            NSWorkspace.shared.openFile(destinationFilePath)
+        openScannedFileIfRequested(at: destinationFilePath)
+    }
+
+    private func openScannedFileIfRequested(at destinationFilePath: String) {
+        let openWith = configuration.config[ScanlineConfigOptionOpenWith] as? String
+        let shouldOpen = configuration.config[ScanlineConfigOptionOpen] != nil
+            || (openWith?.isEmpty == false)
+        guard shouldOpen else { return }
+
+        logger.verbose("Opening file at \(destinationFilePath)")
+
+        if let openWith, !openWith.isEmpty {
+            guard let appURL = Self.applicationURL(for: openWith) else {
+                logger.log("scanline: could not find application for --open-with `\(openWith)'")
+                return
+            }
+            if !NSWorkspace.shared.openFile(destinationFilePath, withApplication: appURL.path) {
+                logger.log("scanline: error opening file with `\(appURL.path)'")
+            }
+            return
         }
 
-        logger.log("Scan saved: \(destinationURL.lastPathComponent)")
+        NSWorkspace.shared.openFile(destinationFilePath)
+    }
+
+    private static func applicationURL(for specifier: String) -> URL? {
+        let trimmed = specifier.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let expandedPath = (trimmed as NSString).expandingTildeInPath
+        if FileManager.default.fileExists(atPath: expandedPath) {
+            var isDirectory: ObjCBool = false
+            if FileManager.default.fileExists(atPath: expandedPath, isDirectory: &isDirectory), isDirectory.boolValue {
+                return URL(fileURLWithPath: expandedPath, isDirectory: true)
+            }
+            return URL(fileURLWithPath: expandedPath)
+        }
+
+        if let bundleURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: trimmed) {
+            return bundleURL
+        }
+
+        if let appPath = NSWorkspace.shared.fullPath(forApplication: trimmed) {
+            return URL(fileURLWithPath: appPath)
+        }
+
+        return nil
     }
 }
 
