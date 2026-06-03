@@ -47,6 +47,11 @@ class ConfigurationTests: XCTestCase {
         XCTAssertEqual(testConfig.config[ScanlineConfigOptionResolution] as? String ?? "", "450")
     }
 
+    func testDefaultResolutionIs600() {
+        let testConfig = ScanConfiguration(arguments: [])
+        XCTAssertEqual(testConfig.config[ScanlineConfigOptionResolution] as? String ?? "", "600")
+    }
+
     func testDefaultFormatIsPdfForFeeder() {
         let testConfig = ScanConfiguration(arguments: [])
         XCTAssertEqual(testConfig.normalizedScanOutputFormat(), "pdf")
@@ -54,6 +59,11 @@ class ConfigurationTests: XCTestCase {
 
     func testDefaultFormatIsPngForFlatbed() {
         let testConfig = ScanConfiguration(arguments: ["--flatbed"])
+        XCTAssertEqual(testConfig.normalizedScanOutputFormat(), "png")
+    }
+
+    func testFlatbedSynonymUsesPngDefault() {
+        let testConfig = ScanConfiguration(arguments: ["-fb"])
         XCTAssertEqual(testConfig.normalizedScanOutputFormat(), "png")
     }
 
@@ -118,6 +128,11 @@ class ConfigurationTests: XCTestCase {
         XCTAssertEqual(testConfig.config[ScanlineConfigOptionListPageSizes] as? Bool, true)
     }
 
+    func testQuerySetsFlag() {
+        let testConfig = ScanConfiguration(arguments: ["--query"])
+        XCTAssertEqual(testConfig.config[ScanlineConfigOptionQuery] as? Bool, true)
+    }
+
     func testDocumentTypeDeprecatedSynonym() {
         let testConfig = ScanConfiguration(arguments: ["--document-type", "uslegal"])
         XCTAssertEqual(testConfig.normalizedPageSizeCatalogKey(), "uslegal")
@@ -141,6 +156,21 @@ class ConfigurationTests: XCTestCase {
         XCTAssertTrue(testConfig.pageSizeUserConfigured)
     }
     
+    func testOpenWithEqualsSyntax() {
+        let testConfig = ScanConfiguration(arguments: ["--open-with=com.apple.Preview"])
+        XCTAssertEqual(testConfig.config[ScanlineConfigOptionOpenWith] as? String, "com.apple.Preview")
+    }
+
+    func testOpenWithSeparateArgument() {
+        let testConfig = ScanConfiguration(arguments: ["--open-with", "/Applications/Preview.app"])
+        XCTAssertEqual(testConfig.config[ScanlineConfigOptionOpenWith] as? String, "/Applications/Preview.app")
+    }
+
+    func testOpenWithApplicationName() {
+        let testConfig = ScanConfiguration(arguments: ["--open-with", "Preview"])
+        XCTAssertEqual(testConfig.config[ScanlineConfigOptionOpenWith] as? String, "Preview")
+    }
+
     func testMissingSecondParameter() {
         // This would throw an array out of bounds error previously.
         _ = ScanConfiguration(arguments: ["-scanner"], configFilePath: testConfigPath)
@@ -179,5 +209,39 @@ class ConfigurationTests: XCTestCase {
 
         let testConfig = ScanConfiguration(arguments: [])
         XCTAssertEqual(testConfig.config[ScanlineConfigOptionScanner] as? String ?? "", "Virtual Scanner EX/AF")
+    }
+
+    func testScanlineDefaultsResolutionAndFlatbed() {
+        setenv("SCANLINE_DEFAULTS", "--resolution 300 --flatbed", 1)
+        defer { unsetenv("SCANLINE_DEFAULTS") }
+
+        let testConfig = ScanConfiguration(arguments: [])
+        XCTAssertEqual(testConfig.config[ScanlineConfigOptionResolution] as? String ?? "", "300")
+        XCTAssertTrue(testConfig.config[ScanlineConfigOptionFlatbed] as? Bool == true)
+    }
+
+    func testScanlineDefaultsOverriddenByCli() {
+        setenv("SCANLINE_DEFAULTS", "--resolution 300", 1)
+        defer { unsetenv("SCANLINE_DEFAULTS") }
+
+        let testConfig = ScanConfiguration(arguments: ["--resolution=450"])
+        XCTAssertEqual(testConfig.config[ScanlineConfigOptionResolution] as? String ?? "", "450")
+    }
+
+    func testScanlineDefaultsOverridesConfigFile() {
+        setenv("SCANLINE_DEFAULTS", "--batch", 1)
+        defer { unsetenv("SCANLINE_DEFAULTS") }
+
+        let testConfig = ScanConfiguration(arguments: [], configFilePath: testConfigPath)
+        XCTAssertTrue(testConfig.config[ScanlineConfigOptionBatch] as? Bool == true)
+        XCTAssertTrue(testConfig.config[ScanlineConfigOptionDuplex] as? Bool == true)
+    }
+
+    func testScanlineDefaultsQuotedValue() {
+        setenv("SCANLINE_DEFAULTS", "--open-with \"My Scanner App\"", 1)
+        defer { unsetenv("SCANLINE_DEFAULTS") }
+
+        let testConfig = ScanConfiguration(arguments: [])
+        XCTAssertEqual(testConfig.config[ScanlineConfigOptionOpenWith] as? String, "My Scanner App")
     }
 }

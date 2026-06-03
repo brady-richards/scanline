@@ -15,12 +15,14 @@ NS_ASSUME_NONNULL_BEGIN
 static NSString * const ScanlineConfigOptionDuplex = @"duplex";
 static NSString * const ScanlineConfigOptionBatch = @"batch";
 static NSString * const ScanlineConfigOptionList = @"list";
+static NSString * const ScanlineConfigOptionQuery = @"query";
 static NSString * const ScanlineConfigOptionFlatbed = @"flatbed";
 static NSString * const ScanlineConfigOptionFormat = @"format";
 static NSString * const ScanlineConfigOptionPageSize = @"page-size";
 static NSString * const ScanlineConfigOptionListPageSizes = @"list-page-sizes";
 static NSString * const ScanlineConfigOptionMono = @"mono";
 static NSString * const ScanlineConfigOptionOpen = @"open";
+static NSString * const ScanlineConfigOptionOpenWith = @"open-with";
 static NSString * const ScanlineConfigOptionDir = @"dir";
 static NSString * const ScanlineConfigOptionName = @"name";
 static NSString * const ScanlineConfigOptionVerbose = @"verbose";

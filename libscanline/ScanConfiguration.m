@@ -224,6 +224,8 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
     return joined;
 }
 
+static NSString * const ScanlineEnvDefaultsKey = @"SCANLINE_DEFAULTS";
+
 @interface ScanConfiguration()
 @property (nonatomic, readwrite) BOOL pageSizeUserConfigured;
 @property (nonatomic, readwrite) BOOL formatUserConfigured;
@@ -250,6 +252,9 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
              ScanlineConfigOptionList: @{
                      @"description": @"List all available scanners, then exit."
                      },
+             ScanlineConfigOptionQuery: @{
+                     @"description": @"Query the selected scanner's capabilities (paper sizes, resolutions, paper handling, etc.), then exit. Same device selection as scanning (first device found, or use -s / --scanner)."
+                     },
              ScanlineConfigOptionFlatbed: @{
                      @"synonyms": @[@"fb"],
                      @"description": @"Scan from the scanner's flatbed (default is paper feeder)"
@@ -275,6 +280,11 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
                      },
              ScanlineConfigOptionOpen: @{
                      @"description": @"Open the scanned image when done."
+                     },
+             ScanlineConfigOptionOpenWith: @{
+                     @"type": @"string",
+                     @"metavar": @"APP",
+                     @"description": @"Open the scanned image with the given application (.app path, bundle identifier, or name as with open -a). Implies --open."
                      },
              ScanlineConfigOptionDir: @{
                      @"synonyms": @[@"folder"],
@@ -303,7 +313,7 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
                      @"type": @"string",
                      @"metavar": @"DPI",
                      @"description": @"Minimum scan resolution in dpi.",
-                     @"default": @"150"
+                     @"default": @"600"
                      },
              ScanlineConfigOptionBrowseSecs: @{
                      @"synonyms": @[@"time", @"t"],
@@ -409,9 +419,21 @@ static NSString *SKGNUOptionNamesWithMetavar(NSString *__nonnull canonicalKey, N
     SKLog(@"Arguments following a bare \"--\" are treated as tags even if they begin with \"-\".");
     SKLog(@"Mandatory arguments to long options are mandatory for short options too.");
     SKLog(@"");
-    SKLog(@"Configuration is read from %@ (one option per line); SCANLINE_DEFAULTS", [ScanConfiguration defaultConfigFilePath]);
-    SKLog(@"is tokenized like shell words and applied before command-line options; later");
-    SKLog(@"options override earlier defaults.");
+    SKLog(@"Configuration is read from %@ (one option per line).", [ScanConfiguration defaultConfigFilePath]);
+    SKLog(@"");
+    SKLog(@"Environment variables:");
+    SKLog(@"  SCANLINE_DEFAULTS supplies default command-line options, processed as if they");
+    SKLog(@"  appeared before any arguments you pass (equivalent to");
+    SKLog(@"  scanline $SCANLINE_DEFAULTS [OPTION]... [TAG]...). Quote values that contain");
+    SKLog(@"  spaces, e.g. SCANLINE_DEFAULTS='--resolution 600 --flatbed'.");
+    SKLog(@"  Precedence (lowest first): built-in defaults, configuration file,");
+    SKLog(@"  SCANLINE_DEFAULTS, command-line arguments.");
+    NSString *scanlineDefaults = [NSProcessInfo processInfo].environment[ScanlineEnvDefaultsKey];
+    if (scanlineDefaults.length > 0) {
+        SKLog(@"  Current SCANLINE_DEFAULTS: %@", scanlineDefaults);
+    } else {
+        SKLog(@"  Current SCANLINE_DEFAULTS: (not set)");
+    }
     SKLog(@"");
     SKLog(@"Examples:");
     SKLog(@"  %@ --duplex taxes", prog);
