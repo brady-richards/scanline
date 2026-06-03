@@ -36,7 +36,26 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
             ICScannerFunctionalUnitType.documentFeeder :
             ICScannerFunctionalUnitType.flatbed
     }
-    
+
+    private var startedFunctionalUnitSelection = false
+    private var configuredFunctionalUnitForScan = false
+
+    /// Picks document feeder when available; otherwise flatbed (or the first unit the driver reports).
+    var effectiveFunctionalUnitType: ICScannerFunctionalUnitType {
+        if configuration.config[ScanlineConfigOptionFlatbed] != nil {
+            return .flatbed
+        }
+
+        let available = scanner.availableFunctionalUnitTypes
+            .compactMap { ICScannerFunctionalUnitType(rawValue: $0.uintValue) }
+        if available.contains(.documentFeeder) {
+            return .documentFeeder
+        }
+        if available.contains(.flatbed) {
+            return .flatbed
+        }
+        return available.first ?? .flatbed
+    }
     public init(scanner: ICScannerDevice, configuration: ScanConfiguration, logger: Logger) {
         self.scanner = scanner
         self.configuration = configuration
@@ -94,22 +113,52 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
         case .obtainResolutions:
             obtainResolutions()
         case .scan:
-            selectFunctionalUnit()
+            beginFunctionalUnitSelectionIfNeeded()
         }
     }
     
     public func scannerDevice(_ scanner: ICScannerDevice, didSelect functionalUnit: ICScannerFunctionalUnit, error: Error?) {
         logger.verbose("didSelectFunctionalUnit: \(functionalUnit) error: \(error?.localizedDescription ?? "[no error]")")
-        
+
+        if let error = error {
+            logger.log("Error selecting scanner functional unit: \(error.localizedDescription)")
+            delegate?.scannerControllerDidFail(self)
+            return
+        }
+
         // NOTE: Despite the fact that `functionalUnit` is not an optional, it still sometimes comes in as `nil` even when `error` is `nil`
         // Oddly, in debug builds, you can check non-optionals for `nil`, but in release builds, that always returns `false`, so we check
         // its address instead.
         let address = unsafeBitCast(functionalUnit, to: Int.self)
-        if address != 0x0 && functionalUnit.type == self.desiredFunctionalUnitType {
-            configureScanner()
-            logger.log("Starting scan...")
-            scanner.requestScan()
+        guard address != 0x0 else {
+            logger.verbose("Scanner returned an invalid functional unit; waiting for driver.")
+            return
         }
+
+        guard !configuredFunctionalUnitForScan else {
+            logger.verbose("Ignoring duplicate functional unit selection callback.")
+            return
+        }
+
+        guard functionalUnit.type == self.effectiveFunctionalUnitType else {
+            let wanted = Self.functionalUnitLabel(self.effectiveFunctionalUnitType)
+            let got = Self.functionalUnitLabel(functionalUnit.type)
+            logger.log("scanline: could not select \(wanted) (driver reported \(got)). Try `--flatbed' if this is a flatbed-only scanner.")
+            delegate?.scannerControllerDidFail(self)
+            return
+        }
+
+        configuredFunctionalUnitForScan = true
+
+        if effectiveFunctionalUnitType == .flatbed,
+           configuration.config[ScanlineConfigOptionFlatbed] == nil,
+           desiredFunctionalUnitType == .documentFeeder {
+            logger.verbose("Document feeder unavailable; using flatbed.")
+        }
+
+        configureScanner()
+        logger.log("Starting scan...")
+        scanner.requestScan()
     }
 
     public func scannerDevice(_ scanner: ICScannerDevice, didScanTo url: URL) {
@@ -167,7 +216,29 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
     }
     
     fileprivate func selectFunctionalUnit() {
-        scanner.requestSelect(self.desiredFunctionalUnitType)
+        startedFunctionalUnitSelection = true
+        scanner.requestSelect(self.effectiveFunctionalUnitType)
+    }
+
+    private func beginFunctionalUnitSelectionIfNeeded() {
+        guard pendingAction == .scan else { return }
+        guard !startedFunctionalUnitSelection else { return }
+
+        let available = scanner.availableFunctionalUnitTypes
+            .compactMap { ICScannerFunctionalUnitType(rawValue: $0.uintValue) }
+        guard !available.isEmpty else { return }
+
+        selectFunctionalUnit()
+    }
+
+    private static func functionalUnitLabel(_ type: ICScannerFunctionalUnitType) -> String {
+        switch type {
+        case .flatbed: return "flatbed"
+        case .documentFeeder: return "document feeder"
+        case .positiveTransparency: return "positive transparency"
+        case .negativeTransparency: return "negative transparency"
+        @unknown default: return "functional unit \(type.rawValue)"
+        }
     }
     
     fileprivate func configureScanner() {
@@ -181,7 +252,7 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
             configureFlatbed()
         }
         
-        let desiredResolution = Int(configuration.config[ScanlineConfigOptionResolution] as? String ?? "150") ?? 150
+        let desiredResolution = Int(configuration.config[ScanlineConfigOptionResolution] as? String ?? "600") ?? 600
         if let resolutionIndex = functionalUnit.supportedResolutions.integerGreaterThanOrEqualTo(desiredResolution) {
             functionalUnit.resolution = resolutionIndex
         }
