@@ -252,7 +252,7 @@ public class ScannerController: NSObject, ICScannerDeviceDelegate {
             configureFlatbed()
         }
         
-        let desiredResolution = Int(configuration.config[ScanlineConfigOptionResolution] as? String ?? "600") ?? 600
+        let desiredResolution = Int(configuration.config[ScanlineConfigOptionResolution] as? String ?? "300") ?? 300
         if let resolutionIndex = functionalUnit.supportedResolutions.integerGreaterThanOrEqualTo(desiredResolution) {
             functionalUnit.resolution = resolutionIndex
         }

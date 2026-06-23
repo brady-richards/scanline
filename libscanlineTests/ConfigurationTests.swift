@@ -47,9 +47,9 @@ class ConfigurationTests: XCTestCase {
         XCTAssertEqual(testConfig.config[ScanlineConfigOptionResolution] as? String ?? "", "450")
     }
 
-    func testDefaultResolutionIs600() {
+    func testDefaultResolutionIs300() {
         let testConfig = ScanConfiguration(arguments: [])
-        XCTAssertEqual(testConfig.config[ScanlineConfigOptionResolution] as? String ?? "", "600")
+        XCTAssertEqual(testConfig.config[ScanlineConfigOptionResolution] as? String ?? "", "300")
     }
 
     func testDefaultFormatIsPdfForFeeder() {

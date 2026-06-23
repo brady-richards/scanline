@@ -314,7 +314,7 @@ static NSString * const ScanlineEnvDefaultsKey = @"SCANLINE_DEFAULTS";
                      @"type": @"string",
                      @"metavar": @"DPI",
                      @"description": @"Minimum scan resolution in dpi.",
-                     @"default": @"600"
+                     @"default": @"300"
                      },
              ScanlineConfigOptionBrowseSecs: @{
                      @"synonyms": @[@"time", @"t"],
