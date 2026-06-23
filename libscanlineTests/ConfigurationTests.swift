@@ -171,6 +171,12 @@ class ConfigurationTests: XCTestCase {
         XCTAssertNotNil(testConfig.config[ScanlineConfigOptionOpen])
     }
 
+    func testDirExpandsTilde() {
+        let testConfig = ScanConfiguration(arguments: ["--dir", "~/Dropbox/Working"])
+        let expected = ("~/Dropbox/Working" as NSString).expandingTildeInPath
+        XCTAssertEqual(testConfig.config[ScanlineConfigOptionDir] as? String, expected)
+    }
+
     func testOpenWithSeparateArgument() {
         let testConfig = ScanConfiguration(arguments: ["--open-with", "/Applications/Preview.app"])
         XCTAssertEqual(testConfig.config[ScanlineConfigOptionOpenWith] as? String, "/Applications/Preview.app")

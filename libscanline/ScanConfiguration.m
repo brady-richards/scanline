@@ -594,6 +594,9 @@ static NSString * const ScanlineEnvDefaultsKey = @"SCANLINE_DEFAULTS";
                 SKLog(@"scanline: option `%@' requires a non-empty argument", theArg);
             }
             if (value.length > 0) {
+                if ([canonicalKey isEqualToString:ScanlineConfigOptionDir]) {
+                    value = [value stringByExpandingTildeInPath];
+                }
                 self.config[canonicalKey] = value;
                 if ([canonicalKey isEqualToString:ScanlineConfigOptionPageSize]) {
                     self.pageSizeUserConfigured = YES;
