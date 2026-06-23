@@ -279,6 +279,7 @@ static NSString * const ScanlineEnvDefaultsKey = @"SCANLINE_DEFAULTS";
                      @"description": @"Scan in monochrome (black and white)"
                      },
              ScanlineConfigOptionOpen: @{
+                     @"type": @"flag",
                      @"description": @"Open the scanned image when done."
                      },
              ScanlineConfigOptionOpenWith: @{

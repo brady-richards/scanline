@@ -161,6 +161,16 @@ class ConfigurationTests: XCTestCase {
         XCTAssertEqual(testConfig.config[ScanlineConfigOptionOpenWith] as? String, "com.apple.Preview")
     }
 
+    func testOpenFlag() {
+        let testConfig = ScanConfiguration(arguments: ["--open"])
+        XCTAssertNotNil(testConfig.config[ScanlineConfigOptionOpen])
+    }
+
+    func testOpenShortFlag() {
+        let testConfig = ScanConfiguration(arguments: ["-open"])
+        XCTAssertNotNil(testConfig.config[ScanlineConfigOptionOpen])
+    }
+
     func testOpenWithSeparateArgument() {
         let testConfig = ScanConfiguration(arguments: ["--open-with", "/Applications/Preview.app"])
         XCTAssertEqual(testConfig.config[ScanlineConfigOptionOpenWith] as? String, "/Applications/Preview.app")

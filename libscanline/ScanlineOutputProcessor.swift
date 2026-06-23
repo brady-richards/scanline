@@ -60,7 +60,7 @@ public class ScanlineOutputProcessor {
         let gregorian = NSCalendar(calendarIdentifier: .gregorian)!
         let dateComponents = gregorian.components([.year, .hour, .minute, .second], from: Date())
         
-        let outputRootDirectory = configuration.config[ScanlineConfigOptionDir] as! String
+        let outputRootDirectory = (configuration.config[ScanlineConfigOptionDir] as! String as NSString).expandingTildeInPath
         var path = outputRootDirectory
         
         // If there's a tag, move the file to the first tag location
@@ -160,42 +160,28 @@ public class ScanlineOutputProcessor {
 
         logger.verbose("Opening file at \(destinationFilePath)")
 
+        let resolvedPath = (destinationFilePath as NSString).expandingTildeInPath
+
+        var arguments: [String] = []
         if let openWith, !openWith.isEmpty {
-            guard let appURL = Self.applicationURL(for: openWith) else {
-                logger.log("scanline: could not find application for --open-with `\(openWith)'")
-                return
-            }
-            if !NSWorkspace.shared.openFile(destinationFilePath, withApplication: appURL.path) {
-                logger.log("scanline: error opening file with `\(appURL.path)'")
+            arguments.append(contentsOf: ["-a", openWith])
+        }
+        arguments.append(resolvedPath)
+
+        let process = Process()
+        process.launchPath = "/usr/bin/open"
+        process.arguments = arguments
+        process.launch()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            if let openWith, !openWith.isEmpty {
+                logger.log("scanline: error opening file with `\(openWith)'")
+            } else {
+                logger.log("scanline: error opening `\(destinationFilePath)'")
             }
             return
         }
-
-        NSWorkspace.shared.openFile(destinationFilePath)
-    }
-
-    private static func applicationURL(for specifier: String) -> URL? {
-        let trimmed = specifier.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-
-        let expandedPath = (trimmed as NSString).expandingTildeInPath
-        if FileManager.default.fileExists(atPath: expandedPath) {
-            var isDirectory: ObjCBool = false
-            if FileManager.default.fileExists(atPath: expandedPath, isDirectory: &isDirectory), isDirectory.boolValue {
-                return URL(fileURLWithPath: expandedPath, isDirectory: true)
-            }
-            return URL(fileURLWithPath: expandedPath)
-        }
-
-        if let bundleURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: trimmed) {
-            return bundleURL
-        }
-
-        if let appPath = NSWorkspace.shared.fullPath(forApplication: trimmed) {
-            return URL(fileURLWithPath: appPath)
-        }
-
-        return nil
     }
 }
 
